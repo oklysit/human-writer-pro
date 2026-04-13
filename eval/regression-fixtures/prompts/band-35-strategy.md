@@ -26,19 +26,24 @@ Strategy: Heavy verbatim stitching. Most clauses should be lifted directly; mini
 
 ## On the "teaching to the test" concern
 
-The strategy block explicitly names a VR target. This is intentional, and it is NOT the methodological flaw the pair-review session flagged.
-
-The flaw the pair-review critiqued was a *different* eval-side prompt (in the original plan's Task 20) that named the metric while the eval scored that metric — a classic teaching-to-the-test loop where the prompt and the evaluator are closed-loop around the same number.
-
-This band-35 prompt is different: it is the **production prompt** that was validated in the pre-registered pilot. It targets VR because empirical results show that heavy verbatim stitching (which VR measures as a downstream signal) is the prompt regime that produces GPTZero-passing output. The regression suite measures whether this exact prompt **continues to produce passing output**, not whether it can be trained to hit a number.
+The strategy block names a VR value (≈35%) as a stylistic nudge to the model. **This is not a claimed success criterion.** We are not asserting "this product hits 35% VR." The prompt is the subject under test; the actual VR that emerges and whether the output passes GPTZero are what we measure.
 
 Framing, made explicit:
-- The prompt is the subject under test.
-- VR and GPTZero are the evaluators.
-- The evaluators are independent of the prompt (they're run after generation, against external tools — GPTZero is a third-party classifier, VR is a deterministic n-gram computation against the raw interview).
-- "Target 5-gram VR ≈ 35%" is a stylistic instruction to the model, not a training signal. It survives in the prompt because it works.
+- **Claim:** this prompt, run against a raw interview, produces output that passes GPTZero.
+- **Subject under test:** the prompt, verbatim.
+- **Evaluators (independent, downstream):** the actual VR that emerges (deterministic n-gram computation against the raw interview) and the GPTZero pass/fail classification (third-party classifier).
+- **The 35% figure inside the prompt is a stylistic nudge.** It survives in the prompt because the pilot showed the prompt works with that nudge included. Removing it is a different prompt and would require re-baselining.
 
-If the eval ever stops agreeing with the prompt's VR target (a future run shows the prompt hits ≈35% VR but fails GPTZero, or hits a much lower VR and still passes), that's new information about prompt-regime causality. It is not evidence that the prompt was "cheating."
+### Relation to refactor Task 20 Change 2 — superseded
+
+The refactor doc at `docs/refactor-2026-04-13.md` (Task 20, Change 2) says:
+> "Remove VR targeting from the generation prompt. Delete `Target 5-gram VR ≈ 35%` from the system prompt used by the runner."
+
+**This directive is superseded.** It was based on the session agent's assumption that 35% VR functions as a truth-claim the product makes. It does not. The prompt stays verbatim — including the "Target 5-gram VR ≈ 35%" line — in both production and the regression runner. The regression suite measures the actual VR that emerges and the GPTZero result; it does not retrain the prompt against any metric.
+
+If a future run shows the prompt hits ≈35% VR but fails GPTZero, or hits a much lower VR and still passes, that is new information about prompt-regime causality. It is not evidence of "cheating."
+
+See `process/decisions.md` entry "VR=35% reframed from target to prompt nudge" for the full trace.
 
 ---
 

@@ -1,0 +1,122 @@
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import type { VRResult } from "./verbatim-ratio";
+
+export type Mode = "essay" | "email" | "blog" | "cover-letter" | "free-form";
+
+export type InterviewTurn = {
+  role: "user" | "assistant";
+  content: string;
+  timestamp?: string;
+};
+
+export type EditTurn = {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+};
+
+export type AppState = {
+  apiKey: string | null;
+  mode: Mode | null;
+  interview: {
+    turns: InterviewTurn[];
+    rawTranscript: string;
+    status: "idle" | "asking" | "ready-to-assemble";
+  };
+  output: string;
+  vrScore: VRResult | null;
+  edits: EditTurn[];
+  isGenerating: boolean;
+  error: string | null;
+};
+
+type AppActions = {
+  setApiKey: (key: string | null) => void;
+  setMode: (mode: Mode) => void;
+  addInterviewTurn: (turn: InterviewTurn) => void;
+  setInterviewStatus: (status: AppState["interview"]["status"]) => void;
+  setOutput: (output: string) => void;
+  setVRScore: (score: VRResult | null) => void;
+  addEdit: (turn: EditTurn) => void;
+  setGenerating: (isGen: boolean) => void;
+  setError: (error: string | null) => void;
+  reset: () => void;
+};
+
+const initialState: AppState = {
+  apiKey: null,
+  mode: null,
+  interview: {
+    turns: [],
+    rawTranscript: "",
+    status: "idle",
+  },
+  output: "",
+  vrScore: null,
+  edits: [],
+  isGenerating: false,
+  error: null,
+};
+
+export const useSessionStore = create<AppState & AppActions>()(
+  persist(
+    (set, get) => ({
+      ...initialState,
+
+      setApiKey: (key) => set({ apiKey: key }),
+
+      setMode: (mode) =>
+        set({
+          mode,
+          interview: { ...initialState.interview },
+          output: "",
+          vrScore: null,
+          edits: [],
+          error: null,
+        }),
+
+      addInterviewTurn: (turn) =>
+        set((state) => ({
+          interview: {
+            ...state.interview,
+            turns: [...state.interview.turns, turn],
+            rawTranscript: state.interview.turns
+              .concat(turn)
+              .filter((t) => t.role === "user")
+              .map((t) => t.content)
+              .join("\n\n"),
+          },
+        })),
+
+      setInterviewStatus: (status) =>
+        set((state) => ({ interview: { ...state.interview, status } })),
+
+      setOutput: (output) => set({ output, vrScore: null }),
+
+      setVRScore: (score) => set({ vrScore: score }),
+
+      addEdit: (turn) =>
+        set((state) => ({ edits: [...state.edits, turn] })),
+
+      setGenerating: (isGen) => set({ isGenerating: isGen }),
+
+      setError: (error) => set({ error }),
+
+      reset: () =>
+        set((state) => ({
+          ...initialState,
+          apiKey: state.apiKey,
+          mode: state.mode,
+        })),
+    }),
+    {
+      name: "human-writer-pro-session",
+      storage: createJSONStorage(() => (typeof window !== "undefined" ? localStorage : ({} as Storage))),
+      partialize: (state) => ({ apiKey: state.apiKey }), // only persist API key, not session state
+    }
+  )
+);
+
+// Helper for tests
+(useSessionStore as any).getInitialState = () => initialState;

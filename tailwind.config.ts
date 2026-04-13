@@ -25,6 +25,7 @@ const config: Config = {
         accent: {
           DEFAULT: "#A16207",
           foreground: "#FFFFFF",
+          hover: "#854D0E",
         },
         background: "#FAFAF7",
         foreground: "#171717",
@@ -50,6 +51,9 @@ const config: Config = {
           DEFAULT: "#A16207",
           foreground: "#FFFFFF",
         },
+      },
+      ringOffsetColor: {
+        background: "#FAFAF7",
       },
       spacing: {
         xs: "4px",

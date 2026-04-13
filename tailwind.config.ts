@@ -62,6 +62,14 @@ const config: Config = {
       },
       borderRadius: {
         DEFAULT: "2px",
+        none: "0",
+        sm: "2px",
+        md: "2px",
+        lg: "2px",
+        xl: "2px",
+        "2xl": "2px",
+        "3xl": "2px",
+        full: "9999px",
       },
       boxShadow: {
         focus: "0 0 0 2px #171717, 0 0 0 4px #FAFAF7",

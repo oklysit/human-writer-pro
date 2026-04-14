@@ -112,9 +112,9 @@ function mean(values: number[]): number {
 }
 
 function std(values: number[]): number {
-  if (values.length === 0) return 0;
+  if (values.length < 2) return 0;
   const m = mean(values);
-  return Math.sqrt(values.reduce((a, b) => a + (b - m) ** 2, 0) / values.length);
+  return Math.sqrt(values.reduce((a, b) => a + (b - m) ** 2, 0) / (values.length - 1));
 }
 
 function round4(n: number): number {

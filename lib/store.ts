@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { VRResult } from "./verbatim-ratio";
-import { canAssemble, countUserWords, type AssessmentLevel } from "./coverage";
+import { canAssemble, countUserWords, stripInterviewQuestions, type AssessmentLevel } from "./coverage";
 
 export type Mode = "essay" | "email" | "blog" | "cover-letter" | "free-form";
 
@@ -106,17 +106,19 @@ export const useSessionStore = create<AppState & AppActions>()(
       setContextNotes: (contextNotes) => set({ contextNotes }),
 
       addInterviewTurn: (turn) =>
-        set((state) => ({
-          interview: {
-            ...state.interview,
-            turns: [...state.interview.turns, turn],
-            rawTranscript: state.interview.turns
-              .concat(turn)
-              .filter((t) => t.role === "user")
-              .map((t) => t.content)
-              .join("\n\n"),
-          },
-        })),
+        set((state) => {
+          const newTurns = [...state.interview.turns, turn];
+          return {
+            interview: {
+              ...state.interview,
+              turns: newTurns,
+              // Per consultant 2026-04-15: assembly stage receives ONLY user
+              // answers, no questions. stripInterviewQuestions enforces that
+              // invariant by name. See lib/coverage.ts.
+              rawTranscript: stripInterviewQuestions(newTurns),
+            },
+          };
+        }),
 
       setInterviewStatus: (status) =>
         set((state) => ({ interview: { ...state.interview, status } })),

@@ -28,19 +28,41 @@ import { createAnthropicClient, streamClaude } from "./anthropic-client";
  * scripts/debug/verify-all-fixtures.ts and confirming VR holds across all
  * cl-assembly fixtures before shipping.
  *
- * Word range was 225–275 in the original pilot. Bumped to 290–400 on
- * 2026-04-14 to match the empirical word-count distribution of the 5
- * approved cover letters in eval/regression-fixtures/cl-assembly/* (range
- * 293-395, median 344). This is a deviation from the locked source-of-truth
- * file at eval/regression-fixtures/prompts/band-35-strategy.md — that file
- * still encodes the 225–275 pilot range and is consumed by the regression
- * runner. Re-baseline the source-of-truth + regression fixtures separately
- * once the new range is confirmed in the live app.
+ * History:
+ * - 2026-04-13: pilot band-35 (225-275 word range, single paragraph,
+ *   strategy-only). Validated 6/6 GPTZero pass rate.
+ * - 2026-04-14: word range bumped to 290-400 to match the empirical
+ *   distribution of the 5 approved CLs (median 344 words).
+ * - 2026-04-15: appended structural beats + pacing block per consultant
+ *   fix #2. Reasoning: the strict band-35 prompt produced output that
+ *   passed VR/GPTZero (17%, 97% human) but failed the eye-test on
+ *   structure (no clear opener / credentials / why / close beats and
+ *   monotone pacing). Structural guidance is allowed; style/Strunk/
+ *   anti-pattern loads are still forbidden — those caused the original
+ *   VR collapse. The "heavy verbatim stitching" instruction still
+ *   governs HOW clauses get lifted; the new block governs WHERE they go
+ *   and how they pace.
+ *
+ * This is a deviation from the locked source-of-truth file at
+ * eval/regression-fixtures/prompts/band-35-strategy.md — that file
+ * still encodes the pure 225-275 pilot prompt and is consumed by the
+ * regression runner. Re-baseline the source-of-truth + regression
+ * fixtures separately once the new prompt is confirmed in the live app.
  */
 export const SYSTEM_PROMPT =
   `Write a single paragraph of approximately 350 words (strict range: 290–400) that answers the interview question below. Output ONLY the paragraph — no headings, no quotes, no meta-commentary.
 
-Strategy: Heavy verbatim stitching. Most clauses should be lifted directly; minimal paraphrase, only light connectors and cleanup (remove false starts, remove 'you know'/'kind of' fillers where they break the paragraph, fix obvious transcription wobble). Target 5-gram VR ≈ 35%.`;
+Strategy: Heavy verbatim stitching. Most clauses should be lifted directly; minimal paraphrase, only light connectors and cleanup (remove false starts, remove 'you know'/'kind of' fillers where they break the paragraph, fix obvious transcription wobble). Target 5-gram VR ≈ 35%.
+
+Structure the output as four beats, in this order:
+1. Opener — state who you are directly and tie to the role. One or two sentences.
+2. Credentials — relevant experience with specific projects, skills, or outcomes.
+3. Why this company or role specifically — the personal reason that drew you here.
+4. Close — what you'd contribute and a concrete next step.
+
+Pull verbatim clauses from the raw material to fill each beat. If a beat has no matching material in the raw text, write a minimal placeholder sentence rather than inventing content. Do not pad.
+
+Pacing: vary sentence length. Mix short sentences (5-12 words) with longer ones. Break at natural stopping points. Do not merge unrelated clauses with em-dashes or semicolons.`;
 
 export type AssembleOptions = {
   apiKey: string;

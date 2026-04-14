@@ -17,7 +17,8 @@
  */
 
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
+import path from "node:path";
 import { computeVR } from "../../lib/verbatim-ratio.js";
 
 const INTERVIEW_PATH =
@@ -56,11 +57,20 @@ async function generateOnce(systemPrompt: string, userPrompt: string): Promise<s
 async function main(): Promise<void> {
   const rawInterview = await readFile(INTERVIEW_PATH, "utf8");
 
+  // Write outputs to scratch/ so we can score them on GPTZero / read them.
+  const outDir = path.join(
+    "/home/pn/projects/human-writer-pro",
+    "scratch",
+    `verify-strip-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}`
+  );
+  await mkdir(outDir, { recursive: true });
+
   console.log("=== Verify strip on cent-capital ===");
   console.log("Pre-strip live app:           6-9% VR");
   console.log("Bisect V5 (≈ pre-strip prod): 42.5% mean (topic 2)");
   console.log("Pilot band-35:                30-45% range");
   console.log(`Target post-strip:            ≥15-30% to call the strip a win`);
+  console.log(`Outputs → ${outDir}`);
   console.log("");
 
   const vrs: number[] = [];
@@ -72,7 +82,10 @@ async function main(): Promise<void> {
     const vr = computeVR(rawInterview, output);
     vrs.push(vr.fiveGram);
     console.log(`${elapsed}s, ${output.length} chars, 5-gram VR: ${(vr.fiveGram * 100).toFixed(1)}%`);
-    console.log(`  preview: ${output.slice(0, 220).replace(/\n/g, " ")}...`);
+
+    const outPath = path.join(outDir, `rep-${k}.md`);
+    await writeFile(outPath, output, "utf8");
+    console.log(`  saved: ${outPath}`);
     console.log("");
   }
 

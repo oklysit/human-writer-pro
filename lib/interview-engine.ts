@@ -29,6 +29,9 @@ export type EngineInput = {
   /** Full conversation history up to and including the LATEST user message.
    *  Turn 0: empty array — the engine will emit the seed question. */
   history: InterviewTurn[];
+  /** Free-form context (assignment text, JD, thesis, etc.) that informs
+   *  what the interviewer probes for. Optional; empty string = none. */
+  contextNotes?: string;
 };
 
 /**
@@ -53,11 +56,11 @@ export type EngineOutput = TurnResult & {
  * This keeps anthropic-client.ts untouched (out of scope for this task).
  */
 export async function askNextQuestion(input: EngineInput): Promise<EngineOutput> {
-  const { mode, apiKey, history } = input;
+  const { mode, apiKey, history, contextNotes } = input;
   const turnCount = history.filter((t) => t.role === "user").length;
 
   // --- Compose system prompt (base + interview step with rubric + mode guidance) ---
-  const systemPrompt = composeInterviewPrompt(mode, turnCount);
+  const systemPrompt = composeInterviewPrompt(mode, turnCount, contextNotes);
 
   // --- Build messages for the API call ---
   // User content goes into messages, NOT the system prompt (injection defense).

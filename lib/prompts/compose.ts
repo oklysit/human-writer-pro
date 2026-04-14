@@ -3,7 +3,11 @@ import { getMode } from "./modes";
 import { getInterviewSystemPrompt } from "./steps/interview";
 import type { Mode } from "../store";
 
-export function composeInterviewPrompt(mode: Mode, turnCount: number): string {
+export function composeInterviewPrompt(
+  mode: Mode,
+  turnCount: number,
+  contextNotes?: string
+): string {
   const modeConfig = getMode(mode);
-  return `${getBasePrompt()}\n\n---\n\n${getInterviewSystemPrompt(modeConfig, turnCount)}`;
+  return `${getBasePrompt()}\n\n---\n\n${getInterviewSystemPrompt(modeConfig, turnCount, contextNotes)}`;
 }

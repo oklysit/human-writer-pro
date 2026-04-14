@@ -63,7 +63,9 @@ export async function streamClaude(
     maxTokens = 2048,
     model = "claude-sonnet-4-6",
   }: {
-    systemPrompt: string;
+    /** Omit to send no system field at all — the band-35 assembly path
+     *  relies on this to match the pilot's user-message-only regime. */
+    systemPrompt?: string;
     messages: Array<{ role: "user" | "assistant"; content: string }>;
     maxTokens?: number;
     model?: string;
@@ -75,7 +77,7 @@ export async function streamClaude(
       const response = await client.messages.create({
         model,
         max_tokens: maxTokens,
-        system: systemPrompt,
+        ...(systemPrompt ? { system: systemPrompt } : {}),
         messages,
       });
       const firstBlock = response.content[0];
@@ -94,7 +96,7 @@ export async function streamClaude(
     const stream = client.messages.stream({
       model,
       max_tokens: maxTokens,
-      system: systemPrompt,
+      ...(systemPrompt ? { system: systemPrompt } : {}),
       messages,
     });
 

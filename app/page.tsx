@@ -11,7 +11,6 @@ import { EditChat } from "@/components/edit-chat";
 import { useSessionStore, useCanAssemble } from "@/lib/store";
 import { assemble } from "@/lib/assemble";
 import type { AIIsmMatch } from "@/lib/ai-ism-detector";
-import { getMode } from "@/lib/prompts/modes";
 import { cn } from "@/lib/utils";
 
 export default function HomePage() {
@@ -72,7 +71,6 @@ export default function HomePage() {
   function handleAssemble() {
     if (!apiKey || !mode) return;
 
-    const modeConfig = getMode(mode);
     const rawInterview = useSessionStore.getState().interview.rawTranscript;
 
     // Cancel any in-flight stream
@@ -83,7 +81,6 @@ export default function HomePage() {
     setVRScore(null);
 
     const { cancel } = assemble({
-      mode: modeConfig,
       apiKey,
       rawInterview,
       onToken: (delta) => {
@@ -113,15 +110,16 @@ export default function HomePage() {
   // ---------------------------------------------------------------------------
   // Regenerate handler — called from PreviewPanel when user clicks
   // "Regenerate avoiding these" in DiagnosticPills.
+  //
+  // Per the 2026-04-14 strip-to-band-35 commit, the assembly call no longer
+  // accepts a bannedPatterns parameter — every layer added to the assembly
+  // prompt costs VR. Regen is now just a fresh re-assemble against the same
+  // raw interview; the AI-ism diagnostic stays as informational signal.
   // ---------------------------------------------------------------------------
-  function handleRegenerate(matches: AIIsmMatch[]): void {
+  function handleRegenerate(_matches: AIIsmMatch[]): void {
     if (!apiKey || !mode) return;
 
-    const modeConfig = getMode(mode);
     const rawInterview = useSessionStore.getState().interview.rawTranscript;
-
-    // Deduplicate patterns before injecting into the prompt.
-    const bannedPatterns = Array.from(new Set(matches.map((m) => m.pattern)));
 
     cancelRef.current?.();
 
@@ -130,10 +128,8 @@ export default function HomePage() {
     setVRScore(null);
 
     const { cancel } = assemble({
-      mode: modeConfig,
       apiKey,
       rawInterview,
-      bannedPatterns,
       onToken: (delta) => {
         const current = useSessionStore.getState().output;
         useSessionStore.getState().setOutput(current + delta);

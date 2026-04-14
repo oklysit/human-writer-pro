@@ -1,20 +1,42 @@
 import { createAnthropicClient, streamClaude } from "./anthropic-client";
-import { getAssemblySystemPrompt } from "./prompts/steps/assembly";
-import type { ModeConfig } from "./prompts/modes/index";
+
+/**
+ * Assembly call — band-35 only.
+ *
+ * Per the 2026-04-14 VR collapse investigation:
+ *   - The pilot's band-35 prompt (passed GPTZero 6/6 in the n=54 validation)
+ *     is the empirical source of truth.
+ *   - Every layer of additional context added to the assembly call —
+ *     framing lines, mode formatting blocks, boundary tags, banned-phrase
+ *     lists, voice/style/Strunk references — costs VR. See bisection at
+ *     scripts/debug/bisect-pipeline.ts.
+ *   - The two pilot sentences are sent as system prompt; the raw interview
+ *     transcript is the only thing in the user message.
+ *
+ * Source of truth for the prompt itself: `eval/regression-fixtures/prompts/band-35-strategy.md`.
+ * Modifying SYSTEM_PROMPT here without re-baselining the regression suite
+ * is a regression-suite violation per that file's policy.
+ *
+ * Style/voice/anti-pattern references (lib/prompts/references/*) belong in
+ * the interview stage and in post-assembly review passes. They do NOT belong
+ * in the assembly call.
+ */
+
+const SYSTEM_PROMPT =
+  `Write a single paragraph of approximately 250 words (strict range: 225–275) that answers the interview question below. Output ONLY the paragraph — no headings, no quotes, no meta-commentary.
+
+Strategy: Heavy verbatim stitching. Most clauses should be lifted directly; minimal paraphrase, only light connectors and cleanup (remove false starts, remove 'you know'/'kind of' fillers where they break the paragraph, fix obvious transcription wobble). Target 5-gram VR ≈ 35%.`;
 
 export type AssembleOptions = {
-  mode: ModeConfig;
   apiKey: string;
   rawInterview: string;
-  /** Optional list of banned patterns to inject into the assembly prompt. */
-  bannedPatterns?: string[];
   onToken: (delta: string) => void;
   onComplete: (fullText: string) => void;
   onError: (message: string) => void;
 };
 
 /**
- * Thin helper that wraps streamClaude with the assembly prompt.
+ * Thin helper that wraps streamClaude with the band-35 assembly prompt.
  * Caller provides token/complete/error callbacks; this function manages
  * the Anthropic client lifecycle and forwards events.
  *
@@ -24,19 +46,18 @@ export type AssembleOptions = {
  * the fact. Streaming tokens already in-flight will be swallowed.
  */
 export function assemble(options: AssembleOptions): { cancel: () => void } {
-  const { mode, apiKey, rawInterview, bannedPatterns, onToken, onComplete, onError } = options;
+  const { apiKey, rawInterview, onToken, onComplete, onError } = options;
 
   let cancelled = false;
 
   const client = createAnthropicClient(apiKey);
-  const systemPrompt = getAssemblySystemPrompt(mode, rawInterview, bannedPatterns);
 
   streamClaude(
     client,
     {
-      systemPrompt,
-      messages: [{ role: "user", content: "Assemble the piece now." }],
-      maxTokens: 4096,
+      systemPrompt: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: rawInterview.trim() }],
+      maxTokens: 1024,
       model: "claude-sonnet-4-6",
     },
     {

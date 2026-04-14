@@ -9,18 +9,24 @@ import Anthropic from "@anthropic-ai/sdk";
  * In dev mode the apiKey can be any non-empty string — the proxy ignores it.
  * The sk-ant- prefix check is skipped accordingly.
  */
-const useLocalOAuth =
-  typeof process !== "undefined" &&
-  process.env?.NEXT_PUBLIC_USE_LOCAL_OAUTH === "1";
+// Next.js substitutes `process.env.NEXT_PUBLIC_*` at build time with a literal
+// string value (or the expression becomes `undefined` if the var isn't set).
+// A `typeof process !== "undefined"` guard blocks that substitution and breaks
+// the flag in the browser — `process` is not defined in client bundles.
+const useLocalOAuth = process.env.NEXT_PUBLIC_USE_LOCAL_OAUTH === "1";
 
 export function createAnthropicClient(apiKey: string): Anthropic {
   if (useLocalOAuth) {
     if (!apiKey) {
       throw new Error("API key field cannot be empty (any value works in local OAuth mode)");
     }
+    // Anthropic SDK builds requests with `new URL(baseURL + path)`, which throws
+    // on a relative baseURL like "/api". Resolve against the page origin so the
+    // proxy route receives a fully-qualified same-origin URL.
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
     return new Anthropic({
       apiKey,
-      baseURL: "/api",
+      baseURL: `${origin}/api`,
       dangerouslyAllowBrowser: true,
     });
   }

@@ -6,7 +6,8 @@
     "gptzero_human_plus_mixed": null,
     "ai_ism_count": null,
     "judge_voice_match": null,
-    "judge_content_fidelity": null
+    "judge_content_fidelity": null,
+    "judge_ai_ism_severity": null
   },
   "tolerance": {
     "vr5": 0.05,
@@ -15,7 +16,7 @@
     "judge_score_max_drop": 0.5
   },
   "aspirational_targets": {
-    "vr5_min": 0.20,
+    "vr5_min": 0.2,
     "gptzero_human_plus_mixed_min": 51
   },
   "notes": "Dense technical cybersec register. Known hard case: stays at ~baseline GPTZero (not required to reach 51)."

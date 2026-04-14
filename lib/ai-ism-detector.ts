@@ -3,13 +3,8 @@
  *
  * Parses the two banned-pattern reference files at module load time and compiles
  * a set of case-insensitive word-boundary regexes. `detect(text)` returns every
- * match with its character-offset position.
- *
- * Inline highlight trade-off (Part C): inline highlights inside the ReactMarkdown
- * prose are deferred. Wrapping matched substrings requires a custom `components.p`
- * renderer that splits text nodes — complex with react-markdown's virtual DOM.
- * The DiagnosticPills panel already surfaces matches with positions, which is
- * sufficient for v1. Defer inline highlights to a future task.
+ * match with its character-offset position. `highlightSegments(text)` returns
+ * span-shaped output for inline React highlights (Part C).
  */
 
 import { STYLE_REFERENCES } from "@/lib/prompts/references/index";
@@ -174,6 +169,77 @@ function getPatterns(): CompiledPattern[] {
 
 // ---------------------------------------------------------------------------
 // Public API
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Highlight segments (Part C)
+// ---------------------------------------------------------------------------
+
+export type HighlightSegment =
+  | { type: "plain"; text: string }
+  | { type: "match"; text: string; pattern: string };
+
+/**
+ * Split `text` into an array of plain/match segments for inline React highlighting.
+ *
+ * The caller wraps each `match` segment in a `<mark>` element; plain segments
+ * are emitted as-is. Segments concatenate exactly to the original string.
+ *
+ * Overlapping matches are resolved by advancing the cursor past each consumed
+ * match — the first (leftmost) match wins.
+ */
+export function highlightSegments(text: string): HighlightSegment[] {
+  if (!text) return [{ type: "plain", text: "" }];
+
+  const patterns = getPatterns();
+
+  // Collect all match occurrences as {start, end, pattern, matchedText}
+  type RawMatch = { start: number; end: number; pattern: string; matchedText: string };
+  const raw: RawMatch[] = [];
+
+  for (const { pattern, regex } of patterns) {
+    regex.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(text)) !== null) {
+      raw.push({
+        start: m.index,
+        end: m.index + m[0].length,
+        pattern,
+        matchedText: m[0],
+      });
+    }
+  }
+
+  if (raw.length === 0) {
+    return [{ type: "plain", text }];
+  }
+
+  // Sort by start position; ties broken by longer match first (greedy)
+  raw.sort((a, b) => a.start - b.start || b.end - a.end);
+
+  const segments: HighlightSegment[] = [];
+  let cursor = 0;
+
+  for (const { start, end, pattern, matchedText } of raw) {
+    // Skip matches that overlap with an already-consumed region
+    if (start < cursor) continue;
+
+    if (start > cursor) {
+      segments.push({ type: "plain", text: text.slice(cursor, start) });
+    }
+    segments.push({ type: "match", text: matchedText, pattern });
+    cursor = end;
+  }
+
+  if (cursor < text.length) {
+    segments.push({ type: "plain", text: text.slice(cursor) });
+  }
+
+  return segments;
+}
+
+// ---------------------------------------------------------------------------
+// Public API — detect
 // ---------------------------------------------------------------------------
 
 /**

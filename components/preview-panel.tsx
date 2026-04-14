@@ -5,12 +5,43 @@ import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { useSessionStore } from "@/lib/store";
 import { computeVR } from "@/lib/verbatim-ratio";
-import { detect } from "@/lib/ai-ism-detector";
+import { detect, highlightSegments } from "@/lib/ai-ism-detector";
 import type { AIIsmMatch } from "@/lib/ai-ism-detector";
 import { DiagnosticPills } from "@/components/diagnostic-pills";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+
+// ---------------------------------------------------------------------------
+// Inline AI-ism highlight helpers (Part C)
+// ---------------------------------------------------------------------------
+
+/**
+ * Walk a react-markdown children array and wrap any string children that
+ * contain AI-ism patterns in `<mark>` elements. Non-string children (inline
+ * `<strong>`, `<em>`, etc.) pass through unchanged.
+ */
+function highlightChildren(children: React.ReactNode): React.ReactNode {
+  return React.Children.map(children, (child) => {
+    if (typeof child !== "string") return child;
+    const segments = highlightSegments(child);
+    // If the whole string is a single plain segment, return the string as-is
+    if (segments.length === 1 && segments[0].type === "plain") return child;
+    return segments.map((seg, i) =>
+      seg.type === "plain" ? (
+        seg.text
+      ) : (
+        <mark
+          key={i}
+          title={`AI-ism: ${seg.pattern}`}
+          className="bg-warning/20 underline decoration-warning/60 decoration-dotted underline-offset-2"
+        >
+          {seg.text}
+        </mark>
+      )
+    );
+  });
+}
 
 type PreviewPanelProps = {
   className?: string;
@@ -107,7 +138,14 @@ export function PreviewPanel({ className, onRegenerate }: PreviewPanelProps): JS
           {/* Prose region */}
           <div className="relative">
             <div className="prose-output font-body text-foreground leading-relaxed">
-              <ReactMarkdown>{output}</ReactMarkdown>
+              <ReactMarkdown
+                components={{
+                  p: ({ children }) => <p>{highlightChildren(children)}</p>,
+                  li: ({ children }) => <li>{highlightChildren(children)}</li>,
+                }}
+              >
+                {output}
+              </ReactMarkdown>
             </div>
             {/* Streaming cue: pulsing bar at bottom when generating */}
             {isGenerating && (

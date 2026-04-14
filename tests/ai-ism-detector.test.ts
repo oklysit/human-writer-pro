@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { detect } from "@/lib/ai-ism-detector";
+import { detect, highlightSegments } from "@/lib/ai-ism-detector";
 import type { AIIsmMatch } from "@/lib/ai-ism-detector";
 
 // ---------------------------------------------------------------------------
@@ -160,5 +160,99 @@ describe("detect", () => {
     const matchedPatterns = new Set(matches.map((m) => m.pattern));
     // We expect the majority to be detected (allow for a few edge cases in phrasing)
     expect(matchedPatterns.size).toBeGreaterThanOrEqual(30);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// highlightSegments() — TDD: tests written before implementation
+// ---------------------------------------------------------------------------
+
+describe("highlightSegments", () => {
+  it("no matches → returns a single plain segment", () => {
+    const result = highlightSegments("The dog sat on the mat.");
+    expect(result).toEqual([{ type: "plain", text: "The dog sat on the mat." }]);
+  });
+
+  it("empty string → returns a single plain segment with empty text", () => {
+    const result = highlightSegments("");
+    expect(result).toEqual([{ type: "plain", text: "" }]);
+  });
+
+  it("match at start → first segment is a match, second is plain", () => {
+    // "robust" is a known AI-ism
+    const result = highlightSegments("robust solution for our team.");
+    expect(result[0].type).toBe("match");
+    expect(result[0].text.toLowerCase()).toBe("robust");
+    expect(result[1].type).toBe("plain");
+    expect(result[1].text).toBe(" solution for our team.");
+  });
+
+  it("match at end → first segment is plain, last is a match", () => {
+    const result = highlightSegments("We need a robust");
+    const last = result[result.length - 1];
+    expect(last.type).toBe("match");
+    expect(last.text.toLowerCase()).toBe("robust");
+    const plain = result.find((s) => s.type === "plain");
+    expect(plain?.text).toBe("We need a ");
+  });
+
+  it("match in middle → plain, match, plain", () => {
+    // "pivotal" mid-sentence
+    const result = highlightSegments("This was a pivotal moment in time.");
+    expect(result.length).toBe(3);
+    expect(result[0]).toEqual({ type: "plain", text: "This was a " });
+    expect(result[1].type).toBe("match");
+    expect(result[1].text.toLowerCase()).toBe("pivotal");
+    expect(result[2]).toEqual({ type: "plain", text: " moment in time." });
+  });
+
+  it("multiple matches → correct interleaved plain/match segments", () => {
+    // Two known AI-isms in one sentence
+    const result = highlightSegments("The robust and pivotal outcome surprised everyone.");
+    const matchSegments = result.filter((s) => s.type === "match");
+    const matchedWords = matchSegments.map((s) => s.text.toLowerCase());
+    expect(matchedWords).toContain("robust");
+    expect(matchedWords).toContain("pivotal");
+    // All segments concatenated should equal the original string
+    const reconstructed = result.map((s) => s.text).join("");
+    expect(reconstructed).toBe("The robust and pivotal outcome surprised everyone.");
+  });
+
+  it("segments concatenate to reproduce the original string exactly", () => {
+    const text = "We can leverage cutting-edge synergy to streamline robust workflows.";
+    const result = highlightSegments(text);
+    const reconstructed = result.map((s) => s.text).join("");
+    expect(reconstructed).toBe(text);
+  });
+
+  it("match segments carry the pattern name", () => {
+    const result = highlightSegments("This is a robust system.");
+    const matchSeg = result.find((s) => s.type === "match");
+    expect(matchSeg).toBeDefined();
+    if (matchSeg?.type === "match") {
+      expect(typeof matchSeg.pattern).toBe("string");
+      expect(matchSeg.pattern.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("overlapping matches — no segment is emitted twice (text coverage ≤ 100%)", () => {
+    // Edge case: two patterns that overlap (if they existed). In practice the
+    // regex set rarely produces overlaps, but the splitter must not double-emit.
+    const text = "We can leverage synergy here.";
+    const result = highlightSegments(text);
+    const reconstructed = result.map((s) => s.text).join("");
+    // The reconstructed text must equal the original — proves no duplication
+    expect(reconstructed).toBe(text);
+    // No empty segments
+    for (const seg of result) {
+      expect(seg.text.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("preserves original casing of matched text in the match segment", () => {
+    // User might type "Robust" with a capital — the segment should preserve the original
+    const result = highlightSegments("Robust systems are important.");
+    const matchSeg = result.find((s) => s.type === "match");
+    expect(matchSeg?.text).toBe("Robust");
   });
 });

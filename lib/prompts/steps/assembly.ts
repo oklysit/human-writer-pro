@@ -30,7 +30,6 @@ Heavy verbatim stitching. Most clauses should be lifted directly from the interv
 2. Stitch those phrases together with minimal connective tissue.
 3. DO NOT smooth, elevate, or "improve" the user's phrasing. Their voice is the point.
 4. DO NOT add facts, credentials, or claims not present in the interview.
-5. DO NOT use generic AI phrases ("leverage", "robust", "in today's fast-paced world", "cutting-edge", "innovative solutions").
 
 ${bannedSection}${mode.systemAddition}
 

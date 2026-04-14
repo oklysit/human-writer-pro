@@ -39,26 +39,3 @@ export function getGoldenRule(ruleNumber: number): string {
   return src.slice(startIdx, endIdx).trim();
 }
 
-/**
- * Get the protective style rules block for system prompts.
- *
- * Only includes rules that PREVENT bad output (banned AI-isms + anti-patterns).
- * Positive-style references (Strunk, Zinsser, Albrighton, Golden Dataset) are
- * deliberately excluded: they encourage "improving" the user's prose, which
- * causes the model to paraphrase and smooth — defeating voice preservation.
- * Per the 54-variant pilot, leaner prompts produced 20-40% VR; the original
- * layered prompt with positive-style references dropped live-app VR to 3-4%.
- */
-export function getStyleRulesBlock(): string {
-  return `
-# Banned AI-isms (NEVER use these phrases)
-
-${STYLE_REFERENCES.bannedIsms}
-
----
-
-# AI Anti-Patterns (recognize + avoid)
-
-${STYLE_REFERENCES.antiPatterns}
-  `.trim();
-}

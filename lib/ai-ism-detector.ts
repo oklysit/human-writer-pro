@@ -129,6 +129,43 @@ function extractAntiPatterns(md: string): string[] {
 }
 
 // ---------------------------------------------------------------------------
+// Question-echo patterns (regex-based, separate category)
+// ---------------------------------------------------------------------------
+//
+// Per consultant 2026-04-15 fix #3: catch model outputs that echo the
+// prompting interview question's structure as an answer-prefix
+// (e.g. "The single thing I want a hiring manager to know is that...").
+// See lib/prompts/references/question-echo-patterns.md for the rationale
+// and per-pattern descriptions.
+//
+// Each rule's `regex` uses /gim/: global (find all), case-insensitive,
+// multiline (^ matches line starts so paragraph openers get anchored).
+
+type QuestionEchoRule = {
+  name: string;
+  regex: RegExp;
+};
+
+const QUESTION_ECHO_RULES: QuestionEchoRule[] = [
+  {
+    name: "what-X-is-that",
+    regex: /^(What|Why|How|When|Where|Who)\s+.+?\s+(is|are|was|were|would be)\s+(that|when|why|how)\b/gim,
+  },
+  {
+    name: "my-answer-is",
+    regex: /^(My|Our)\s+(answer|response|approach|take)\s+(is|to this|to that)\b/gim,
+  },
+  {
+    name: "in-response-to",
+    regex: /^(In response to|To answer|To address|Regarding)\b/gim,
+  },
+  {
+    name: "the-X-thing-is",
+    regex: /^The\s+(single|main|biggest|most important|key)\s+\w+\s+(is|would be|I want)/gim,
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Module-level compiled patterns (built once on first import)
 // ---------------------------------------------------------------------------
 
@@ -210,6 +247,20 @@ export function highlightSegments(text: string): HighlightSegment[] {
     }
   }
 
+  // Question-echo matches use the rule name as the displayed pattern.
+  for (const rule of QUESTION_ECHO_RULES) {
+    rule.regex.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = rule.regex.exec(text)) !== null) {
+      raw.push({
+        start: m.index,
+        end: m.index + m[0].length,
+        pattern: rule.name,
+        matchedText: m[0],
+      });
+    }
+  }
+
   if (raw.length === 0) {
     return [{ type: "plain", text }];
   }
@@ -256,12 +307,22 @@ export function detect(text: string): AIIsmMatch[] {
   const matches: AIIsmMatch[] = [];
   const patterns = getPatterns();
 
+  // Word/phrase matches (legacy banned-isms + anti-patterns).
   for (const { pattern, regex } of patterns) {
     // Reset lastIndex since the regexes are compiled with /g flag (stateful).
     regex.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = regex.exec(text)) !== null) {
       matches.push({ pattern, position: m.index });
+    }
+  }
+
+  // Question-echo regex matches (category: "question-echo").
+  for (const rule of QUESTION_ECHO_RULES) {
+    rule.regex.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = rule.regex.exec(text)) !== null) {
+      matches.push({ pattern: rule.name, position: m.index, category: "question-echo" });
     }
   }
 

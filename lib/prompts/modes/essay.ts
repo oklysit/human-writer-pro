@@ -5,6 +5,7 @@ export const ESSAY_MODE = {
   displayName: "Essay",
   seedQuestion: "What's the big idea? If you had 10 seconds to make someone care, what would you say?",
   targetWords: 600,
+  rubricItems: ["thesis", "main claim", "supporting evidence", "counter-position acknowledged", "close"],
   systemAddition: `
 # Mode: Essay
 

@@ -5,6 +5,7 @@ export const FREE_FORM_MODE = {
   displayName: "Free-Form",
   seedQuestion: "What are we writing today? Describe it like you're pitching it to a friend.",
   targetWords: 500,
+  rubricItems: ["topic", "audience", "tone", "key content", "close"],
   systemAddition: `
 # Mode: Free-Form
 

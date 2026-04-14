@@ -5,6 +5,7 @@ export const COVER_LETTER_MODE = {
   displayName: "Cover Letter",
   seedQuestion: "Tell me about the job you're applying to, and why it caught your attention.",
   targetWords: 280,
+  rubricItems: ["opener hook", "credentials", "why this company", "professional opinion", "close"],
   systemAddition: `
 # Mode: Cover Letter
 

@@ -5,6 +5,7 @@ export const BLOG_MODE = {
   displayName: "Blog Post",
   seedQuestion: "Walk me through what you want to write about — pretend I haven't seen it yet.",
   targetWords: 900,
+  rubricItems: ["hook", "main idea", "supporting points or stories", "voice consistency", "takeaway"],
   systemAddition: `
 # Mode: Blog Post
 

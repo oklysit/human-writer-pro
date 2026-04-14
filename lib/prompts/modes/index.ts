@@ -11,6 +11,7 @@ export type ModeConfig = {
   seedQuestion: string;
   targetWords: number;
   systemAddition: string;
+  rubricItems: string[];
 };
 
 export const MODES: Record<Mode, ModeConfig> = {

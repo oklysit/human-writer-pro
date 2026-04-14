@@ -1,3 +1,5 @@
+import { STYLE_REFERENCES } from "../references";
+
 export const FREE_FORM_MODE = {
   name: "free-form",
   displayName: "Free-Form",
@@ -19,5 +21,9 @@ Style targets:
 - Still apply voice-preservation priority
 - Still avoid banned AI-isms
 - If the user's intent is genuinely ambiguous by end of interview, offer to assemble in the most likely format and flag the alternative.
+
+## Anti-Patterns to Avoid
+
+${STYLE_REFERENCES.antiPatterns}
   `.trim(),
 };

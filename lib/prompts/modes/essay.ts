@@ -1,3 +1,5 @@
+import { getGoldenRule, STYLE_REFERENCES } from "../references";
+
 export const ESSAY_MODE = {
   name: "essay",
   displayName: "Essay",
@@ -16,5 +18,17 @@ Style targets:
 - Concrete nouns beat abstract categories.
 - At least one memorable sentence or phrase that a reader would quote.
 - No hedging qualifiers ("perhaps", "somewhat", "it could be argued that") unless the argument truly needs them.
+
+## Golden Dataset Rule for This Mode
+
+${getGoldenRule(5)}
+
+## Strunk Rules (Grammar and Style)
+
+${STYLE_REFERENCES.strunk}
+
+## Anti-Patterns to Avoid
+
+${STYLE_REFERENCES.antiPatterns}
   `.trim(),
 };

@@ -9,7 +9,8 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "eval:cl": "tsx scripts/eval/run-cl-regression.ts"
+    "eval:cl": "tsx scripts/eval/run-cl-regression.ts",
+    "eval:cl-diff": "tsx scripts/eval/compare-baselines.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.88.0",

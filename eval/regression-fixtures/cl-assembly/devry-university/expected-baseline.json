@@ -1,0 +1,22 @@
+{
+  "fixture": "devry-university",
+  "prompt_sha": null,
+  "baseline": {
+    "vr5_mean": 0.264,
+    "gptzero_human_plus_mixed": null,
+    "ai_ism_count": null,
+    "judge_voice_match": null,
+    "judge_content_fidelity": null
+  },
+  "tolerance": {
+    "vr5": 0.05,
+    "gptzero_human_plus_mixed": 20,
+    "ai_ism_count_max_increase": 2,
+    "judge_score_max_drop": 0.5
+  },
+  "aspirational_targets": {
+    "vr5_min": 0.20,
+    "gptzero_human_plus_mixed_min": 51
+  },
+  "notes": "Pilot dead-zone counter-example (low VR, still passed GPTZero). Real-world evidence that VR >= 0.20 is not a hard threshold."
+}

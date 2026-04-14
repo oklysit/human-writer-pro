@@ -1,0 +1,9 @@
+Your "press 1, press 2" line landed harder than I expected. Most of my spare tokens this spring have gone into training a Qwen3-4B voice adapter on my own speech, thinking about the same axis you are: people are already tuned to recognize AI, and the further an interaction gets from that flag, the more satisfied the caller becomes. Talking to a corporation is business, not friendship. An agent with infinite patience handling conflict the same way every time is often more humane than handing a venting customer to a rep who has been hit with fifty of them that day.
+
+Real numbers: Qwen3-4B with a QLoRA voice adapter, ~60-70% stylometric similarity vs my baseline -- a working loop, not production, and enough failure under VRAM limits to know what I would change for call-center audio. My default agent architecture is a router skill loading specialty context on demand; password-reset callers do not load loan-lookup context, so the stack stays light and cheap by construction. Evaluation is where I have spent the most hours. Per-call telemetry, 10-dimension rubric, regression tests on the telemetry itself, because when cost tracking silently breaks, everything downstream gets worse. For agents talking to real humans, subjective evaluation has to live in the stack from day one, in order to keep up with how quickly people recognize AI.
+
+Honest about the gaps: ~12 months of serious prompt work, no telephony, no enterprise scale. Two years of prompt engineering is quite literally 50-80% of how long that discipline has existed, and there is no better time to bet on someone obsessed with it. Five years at Apple retail gave me the service-interaction intuition. If I am not a traditional syntax-heavy engineer, I suspect you are not looking for one.
+
+One thing I would ask you back: what are you doing about anti-AI sentiment?
+
+That question is genuine -- oklyspimentel@gmail.com.

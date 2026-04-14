@@ -8,7 +8,7 @@ import { SettingsDialog } from "@/components/settings-dialog";
 import { InterviewPanel } from "@/components/interview-panel";
 import { PreviewPanel } from "@/components/preview-panel";
 import { EditChat } from "@/components/edit-chat";
-import { useSessionStore } from "@/lib/store";
+import { useSessionStore, useCanAssemble } from "@/lib/store";
 import { assemble } from "@/lib/assemble";
 import { getMode } from "@/lib/prompts/modes";
 import { cn } from "@/lib/utils";
@@ -19,8 +19,8 @@ export default function HomePage() {
   // ---------------------------------------------------------------------------
   const apiKey = useSessionStore((s) => s.apiKey);
   const mode = useSessionStore((s) => s.mode);
-  const interviewStatus = useSessionStore((s) => s.interview.status);
   const isGenerating = useSessionStore((s) => s.isGenerating);
+  const canAssemble = useCanAssemble();
 
   const setOutput = useSessionStore((s) => s.setOutput);
   const setVRScore = useSessionStore((s) => s.setVRScore);
@@ -112,7 +112,6 @@ export default function HomePage() {
   // ---------------------------------------------------------------------------
   // Derived flags
   // ---------------------------------------------------------------------------
-  const readyToAssemble = interviewStatus === "ready-to-assemble";
   const apiKeyMissing = apiKey === null;
   const editChatActive = selectedParagraph !== null;
 
@@ -170,12 +169,17 @@ export default function HomePage() {
             <Button
               variant="default"
               size="sm"
-              disabled={!readyToAssemble || isGenerating}
+              disabled={!canAssemble || isGenerating}
               onClick={handleAssemble}
               className="w-full font-mono uppercase tracking-wider"
             >
               {isGenerating ? "Assembling…" : "Assemble →"}
             </Button>
+            {!canAssemble && !isGenerating && mode !== null && apiKey !== null && (
+              <p className="font-body text-sm text-muted-foreground mt-2 text-center">
+                Keep going — the tool needs more of your thinking before it can draft.
+              </p>
+            )}
           </div>
         </div>
 

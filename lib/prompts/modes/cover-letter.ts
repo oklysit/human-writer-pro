@@ -1,5 +1,3 @@
-import { getGoldenRule, STYLE_REFERENCES } from "../references";
-
 export const COVER_LETTER_MODE = {
   name: "cover-letter",
   displayName: "Cover Letter",
@@ -9,27 +7,17 @@ export const COVER_LETTER_MODE = {
   systemAddition: `
 # Mode: Cover Letter
 
-The output is a cover letter (200-350 words). Structure per the killer framework:
-- Headline: 2 elements, ≤95 chars, no metrics, no graduation dates.
-- First sentence: hooks with the reader's need, not your credentials.
-- Second sentence: shows fit — specifically why you for this role.
-- Third sentence: names the specific role/company — proves you read the posting.
-- Body: 2-3 paragraphs of skill-match stories in Theme → Context → What you did → Why it matters format.
-- Optional: conditional gap paragraph (only if this is a reach — skip for strong direct matches).
-- Close: vary the closing line. Do NOT always end with "I'd like to talk about this."
+The output is a traditional cover letter (200-350 words).
 
-Style targets:
-- No "I am writing to express my interest." Get to the reader's need in sentence one.
-- No corporate-ese. Default to plain, direct register.
-- Match the company's stated values via vocabulary echo (use their words back).
-- Word budget strict: aim for ~280 words, never over 400.
+Format:
+- Opening line: "Dear [HIRING MANAGER]," — or use a specific name if the interview mentions one. Leave "[HIRING MANAGER]" as a literal placeholder the user can fill in if no name is available.
+- Body: 2-3 paragraphs assembled directly from the user's interview content. Follow the verbatim stitching strategy.
+- Closing line: one sentence varying in form (do NOT default to "I'd like to talk about this"). Let the interview content suggest a natural close.
+- Signoff: "[Signoff]" placeholder on its own line — user fills in "Best," / "Thanks," / their preferred closing.
+- Name: leave blank — user signs in their own hand.
 
-## Golden Dataset Rule for This Mode
+Word budget: aim for ~280 words, never exceed 400.
 
-${getGoldenRule(11)}
-
-## Anti-Patterns to Avoid
-
-${STYLE_REFERENCES.antiPatterns}
+Style: plain, direct register. No corporate-ese. No "I am writing to express my interest." Do not add a title, headline, or decorative section heading — a cover letter is a letter, not an article.
   `.trim(),
 };

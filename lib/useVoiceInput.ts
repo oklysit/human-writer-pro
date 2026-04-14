@@ -57,6 +57,15 @@ export type UseVoiceInputReturn = {
   start: () => void;
   /** Stop recognition. No-op if not recording. */
   stop: () => void;
+  /**
+   * Clear the accumulated `finalTranscript` and `interimTranscript` without
+   * stopping recognition. Used by the interview panel after a turn submission
+   * to draw a clean boundary between turns when the mic is left running.
+   * Without this, an active recording session would keep accumulating and
+   * the next turn's stored answer would include all previous turns' text
+   * (Scenario B state corruption — see 2026-04-15 consultant report).
+   */
+  reset: () => void;
   /** Last error message, null if none. */
   error: string | null;
 };
@@ -83,6 +92,11 @@ export function useVoiceInput(opts: UseVoiceInputOptions = {}): UseVoiceInputRet
   const recognitionRef = React.useRef<ISpeechRecognition | null>(null);
   // Guard against double-start from rapid clicks
   const startingRef = React.useRef(false);
+  // Hoisted to a ref so reset() can clear it without restarting recognition.
+  // Previously this was a closure variable inside start(), which meant only
+  // a fresh start() call could reset it — corrupting state when the mic was
+  // left running across turn submits (2026-04-15 fix).
+  const accumulatedFinalRef = React.useRef("");
 
   // Cleanup on unmount
   React.useEffect(() => {
@@ -109,19 +123,19 @@ export function useVoiceInput(opts: UseVoiceInputOptions = {}): UseVoiceInputRet
     recognition.interimResults = true;
     recognition.lang = "en-US";
 
-    let accumulatedFinal = "";
+    accumulatedFinalRef.current = "";
 
     recognition.onresult = (event: ISpeechRecognitionEvent) => {
       let interim = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
-          accumulatedFinal += result[0].transcript;
+          accumulatedFinalRef.current += result[0].transcript;
         } else {
           interim += result[0].transcript;
         }
       }
-      setFinalTranscript(accumulatedFinal);
+      setFinalTranscript(accumulatedFinalRef.current);
       setInterimTranscript(interim);
     };
 
@@ -175,6 +189,12 @@ export function useVoiceInput(opts: UseVoiceInputOptions = {}): UseVoiceInputRet
     // State is updated via onend handler
   }, [recording]);
 
+  const reset = React.useCallback(() => {
+    accumulatedFinalRef.current = "";
+    setFinalTranscript("");
+    setInterimTranscript("");
+  }, []);
+
   return {
     supported,
     recording,
@@ -182,6 +202,7 @@ export function useVoiceInput(opts: UseVoiceInputOptions = {}): UseVoiceInputRet
     finalTranscript,
     start,
     stop,
+    reset,
     error,
   };
 }

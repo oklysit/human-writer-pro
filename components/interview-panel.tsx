@@ -168,6 +168,13 @@ export function InterviewPanel() {
       timestamp: new Date().toISOString(),
     });
     setInputValue("");
+    // Clear the voice transcript buffer so the next turn starts from a
+    // clean slate. Without this, an active recording session keeps
+    // accumulating since the last voice.start() call, and the live-preview
+    // effect re-populates the textarea with prior turns' text after
+    // setInputValue("") cleared it. See 2026-04-15 consultant report —
+    // "Scenario B" state corruption confirmed in the CrowdStrike interview.
+    voice.reset();
     setLoading(true);
 
     // Build history including the just-added user turn

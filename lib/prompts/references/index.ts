@@ -11,6 +11,7 @@ import aiAntiPatterns from "./ai-anti-patterns.md?raw";
 import bannedAiIsms from "./banned-ai-isms.md?raw";
 import zinsserPrinciples from "./zinsser-principles.md?raw";
 import albrightonPrinciples from "./albrighton-principles.md?raw";
+import goldenDataset from "./golden-dataset.md?raw";
 
 export const STYLE_REFERENCES = {
   strunk: strunkRules,
@@ -18,7 +19,25 @@ export const STYLE_REFERENCES = {
   bannedIsms: bannedAiIsms,
   zinsser: zinsserPrinciples,
   albrighton: albrightonPrinciples,
+  goldenDataset: goldenDataset,
 };
+
+/**
+ * Extract a single numbered rule from the Golden Dataset by rule number.
+ * Returns the full rule block (heading + AI/Human examples + Rule line).
+ */
+export function getGoldenRule(ruleNumber: number): string {
+  const src = STYLE_REFERENCES.goldenDataset;
+  const startPattern = new RegExp(`### ${ruleNumber}\\.`);
+  const nextPattern = /^### \d+\./m;
+  const startMatch = startPattern.exec(src);
+  if (!startMatch) return "";
+  const startIdx = startMatch.index;
+  const rest = src.slice(startIdx + startMatch[0].length);
+  const nextMatch = nextPattern.exec(rest);
+  const endIdx = nextMatch ? startIdx + startMatch[0].length + nextMatch.index : src.length;
+  return src.slice(startIdx, endIdx).trim();
+}
 
 /**
  * Get a concatenated style rules block for system prompts.

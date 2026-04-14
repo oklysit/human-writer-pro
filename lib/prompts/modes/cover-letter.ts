@@ -1,3 +1,5 @@
+import { getGoldenRule, STYLE_REFERENCES } from "../references";
+
 export const COVER_LETTER_MODE = {
   name: "cover-letter",
   displayName: "Cover Letter",
@@ -20,5 +22,13 @@ Style targets:
 - No corporate-ese. Default to plain, direct register.
 - Match the company's stated values via vocabulary echo (use their words back).
 - Word budget strict: aim for ~280 words, never over 400.
+
+## Golden Dataset Rule for This Mode
+
+${getGoldenRule(11)}
+
+## Anti-Patterns to Avoid
+
+${STYLE_REFERENCES.antiPatterns}
   `.trim(),
 };

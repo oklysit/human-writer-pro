@@ -1,3 +1,5 @@
+import { getGoldenRule, STYLE_REFERENCES } from "../references";
+
 export const BLOG_MODE = {
   name: "blog",
   displayName: "Blog Post",
@@ -17,5 +19,17 @@ Style targets:
 - Direct address ("you") is fine and often right.
 - Links / quotes / code blocks welcome if the user provided them in the interview.
 - No SEO filler ("in this article, we'll explore..." — just show, don't pre-announce).
+
+## Golden Dataset Rules for This Mode
+
+${getGoldenRule(8)}
+
+---
+
+${getGoldenRule(10)}
+
+## Anti-Patterns to Avoid
+
+${STYLE_REFERENCES.antiPatterns}
   `.trim(),
 };

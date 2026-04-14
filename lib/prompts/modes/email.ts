@@ -1,3 +1,5 @@
+import { getGoldenRule, STYLE_REFERENCES } from "../references";
+
 export const EMAIL_MODE = {
   name: "email",
   displayName: "Email",
@@ -17,5 +19,17 @@ Style targets:
 - Shortest professional register that still respects the reader.
 - Active voice. First person. No passive constructions.
 - If action is needed, make it visually distinct (short line or bullet).
+
+## Golden Dataset Rules for This Mode
+
+${getGoldenRule(1)}
+
+---
+
+${getGoldenRule(4)}
+
+## Anti-Patterns to Avoid
+
+${STYLE_REFERENCES.antiPatterns}
   `.trim(),
 };

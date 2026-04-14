@@ -163,3 +163,22 @@ export const useSessionStore = create<AppState & AppActions>()(
 
 // Helper for tests
 (useSessionStore as any).getInitialState = () => initialState;
+
+// ---------------------------------------------------------------------------
+// Selector hooks
+// ---------------------------------------------------------------------------
+
+import { canAssemble, countUserWords } from "./coverage";
+
+/**
+ * Returns true when the user has provided enough thinking to assemble:
+ * - raw interview word count >= 150
+ * - coverage score >= 0.6
+ * Defense-in-depth gate independent of engine-emitted "ready-to-assemble" status.
+ */
+export function useCanAssemble(): boolean {
+  return useSessionStore((s) => {
+    const words = countUserWords(s.interview.turns);
+    return canAssemble(s.interview.coverageScore, words);
+  });
+}

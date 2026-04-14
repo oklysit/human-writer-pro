@@ -62,7 +62,9 @@ Structure the output as four beats, in this order:
 
 Pull verbatim clauses from the raw material to fill each beat. If a beat has no matching material in the raw text, write a minimal placeholder sentence rather than inventing content. Do not pad.
 
-Pacing: vary sentence length. Mix short sentences (5-12 words) with longer ones. Break at natural stopping points. Do not merge unrelated clauses with em-dashes or semicolons.`;
+Pacing: vary sentence length. Mix short sentences (5-12 words) with longer ones. Break at natural stopping points. Do not merge unrelated clauses with em-dashes or semicolons.
+
+Apply heavy verbatim stitching within each beat — the structural beats tell you WHERE to place clauses, the stitching strategy tells you HOW to lift them. If a beat would require a transitional or framing sentence not present in the raw material, omit it rather than invent it.`;
 
 export type AssembleOptions = {
   apiKey: string;

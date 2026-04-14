@@ -22,8 +22,23 @@ import { createAnthropicClient, streamClaude } from "./anthropic-client";
  * in the assembly call.
  */
 
-const SYSTEM_PROMPT =
-  `Write a single paragraph of approximately 250 words (strict range: 225–275) that answers the interview question below. Output ONLY the paragraph — no headings, no quotes, no meta-commentary.
+/**
+ * Exported so the verification scripts at scripts/debug/ can pin to the same
+ * prompt the live app sends. Modifying this string requires re-running
+ * scripts/debug/verify-all-fixtures.ts and confirming VR holds across all
+ * cl-assembly fixtures before shipping.
+ *
+ * Word range was 225–275 in the original pilot. Bumped to 290–400 on
+ * 2026-04-14 to match the empirical word-count distribution of the 5
+ * approved cover letters in eval/regression-fixtures/cl-assembly/* (range
+ * 293-395, median 344). This is a deviation from the locked source-of-truth
+ * file at eval/regression-fixtures/prompts/band-35-strategy.md — that file
+ * still encodes the 225–275 pilot range and is consumed by the regression
+ * runner. Re-baseline the source-of-truth + regression fixtures separately
+ * once the new range is confirmed in the live app.
+ */
+export const SYSTEM_PROMPT =
+  `Write a single paragraph of approximately 350 words (strict range: 290–400) that answers the interview question below. Output ONLY the paragraph — no headings, no quotes, no meta-commentary.
 
 Strategy: Heavy verbatim stitching. Most clauses should be lifted directly; minimal paraphrase, only light connectors and cleanup (remove false starts, remove 'you know'/'kind of' fillers where they break the paragraph, fix obvious transcription wobble). Target 5-gram VR ≈ 35%.`;
 

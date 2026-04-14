@@ -108,4 +108,16 @@ describe("useSessionStore", () => {
     expect(state.interview.rubricItemsAddressed).toEqual([]);
     expect(state.interview.lastAssessment).toBeNull();
   });
+
+  // --- setCoverageScore clamping (Fix #1 defense-in-depth) ---
+
+  it("setCoverageScore(1.5) clamps to 1", () => {
+    useSessionStore.getState().setCoverageScore(1.5);
+    expect(useSessionStore.getState().interview.coverageScore).toBe(1);
+  });
+
+  it("setCoverageScore(-0.3) clamps to 0", () => {
+    useSessionStore.getState().setCoverageScore(-0.3);
+    expect(useSessionStore.getState().interview.coverageScore).toBe(0);
+  });
 });

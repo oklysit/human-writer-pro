@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { VRResult } from "./verbatim-ratio";
-import type { AssessmentLevel } from "./coverage";
+import { canAssemble, countUserWords, type AssessmentLevel } from "./coverage";
 
 export type Mode = "essay" | "email" | "blog" | "cover-letter" | "free-form";
 
@@ -167,8 +167,6 @@ export const useSessionStore = create<AppState & AppActions>()(
 // ---------------------------------------------------------------------------
 // Selector hooks
 // ---------------------------------------------------------------------------
-
-import { canAssemble, countUserWords } from "./coverage";
 
 /**
  * Returns true when the user has provided enough thinking to assemble:

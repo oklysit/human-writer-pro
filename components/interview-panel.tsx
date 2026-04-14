@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Mic } from "lucide-react";
+import { Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useSessionStore } from "@/lib/store";
 import { askNextQuestion } from "@/lib/interview-engine";
 import { countUserWords } from "@/lib/coverage";
 import { cn } from "@/lib/utils";
+import { useVoiceInput } from "@/lib/useVoiceInput";
 
 export function InterviewPanel() {
   // ---------------------------------------------------------------------------
@@ -36,6 +37,48 @@ export function InterviewPanel() {
 
   // Ref for scroll-to-bottom on new turns
   const historyEndRef = React.useRef<HTMLDivElement>(null);
+
+  // ---------------------------------------------------------------------------
+  // Voice input
+  // ---------------------------------------------------------------------------
+  // baseInputRef holds the textarea value at the moment recording starts,
+  // so we can append interim/final transcripts without losing prior text.
+  const baseInputRef = React.useRef("");
+
+  const voice = useVoiceInput({
+    onError: (msg) => setError(msg),
+  });
+
+  // When recording starts, snapshot the current textarea value.
+  const prevRecordingRef = React.useRef(false);
+  React.useEffect(() => {
+    if (voice.recording && !prevRecordingRef.current) {
+      baseInputRef.current = inputValue;
+    }
+    prevRecordingRef.current = voice.recording;
+  });
+
+  // Live preview: while recording, show base + final-so-far + interim
+  React.useEffect(() => {
+    if (!voice.recording) return;
+    const base = baseInputRef.current;
+    const separator = base.length > 0 && !base.endsWith(" ") ? " " : "";
+    const preview = voice.finalTranscript + voice.interimTranscript;
+    if (preview) {
+      setInputValue(base + separator + preview);
+    }
+  }, [voice.recording, voice.finalTranscript, voice.interimTranscript]);
+
+  // On recognition end (natural or manual stop): commit final transcript
+  React.useEffect(() => {
+    if (!voice.recording && voice.finalTranscript) {
+      const base = baseInputRef.current;
+      const separator = base.length > 0 && !base.endsWith(" ") ? " " : "";
+      setInputValue(base + separator + voice.finalTranscript);
+      baseInputRef.current = "";
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voice.recording]);
 
   // ---------------------------------------------------------------------------
   // Derived values
@@ -332,18 +375,42 @@ export function InterviewPanel() {
         />
 
         <div className="flex items-center gap-2">
-          {/* TODO Task 14: voice input */}
-          <button
-            type="button"
-            disabled
-            aria-label="Voice input (coming soon)"
-            className={cn(
-              "flex items-center justify-center h-9 w-9 rounded-sm border border-border",
-              "text-muted-foreground cursor-not-allowed opacity-40"
-            )}
-          >
-            <Mic className="h-4 w-4" aria-hidden />
-          </button>
+          {/* Voice input button */}
+          {voice.supported ? (
+            <button
+              type="button"
+              onClick={() => (voice.recording ? voice.stop() : voice.start())}
+              disabled={loading}
+              aria-label={voice.recording ? "Stop voice input" : "Start voice input"}
+              title={voice.recording ? "Stop recording" : "Start voice input"}
+              className={cn(
+                "flex items-center justify-center h-9 w-9 rounded-sm border border-border transition-colors",
+                voice.recording
+                  ? "text-accent border-accent animate-pulse"
+                  : "text-muted-foreground hover:text-foreground hover:border-foreground",
+                loading && "opacity-40 cursor-not-allowed"
+              )}
+            >
+              {voice.recording ? (
+                <MicOff className="h-4 w-4" aria-hidden />
+              ) : (
+                <Mic className="h-4 w-4" aria-hidden />
+              )}
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled
+              aria-label="Voice input unavailable"
+              title="Voice input not supported in this browser. Chrome or Edge recommended."
+              className={cn(
+                "flex items-center justify-center h-9 w-9 rounded-sm border border-border",
+                "text-muted-foreground cursor-not-allowed opacity-40"
+              )}
+            >
+              <Mic className="h-4 w-4" aria-hidden />
+            </button>
+          )}
 
           <Button
             variant="default"

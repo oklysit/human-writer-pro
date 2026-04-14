@@ -1,5 +1,39 @@
 # Handoff — 2026-04-14 — Day 2 + Day 3 close
 
+## TL;DR for the Day 4 session
+
+**State:** 50 commits ahead of origin, tree clean at `685788e`. 146/146
+tests, `next build` passes. Nothing blocks on engineering — everything
+left needs either the user's keyboard, camera, or PAT.
+
+**Day 4 critical path (do in this order):**
+
+1. Generate GitHub PAT → `git push -u origin main` (first push)
+2. Connect repo to Vercel → deploy to production (no env vars needed;
+   BYO-key architecture)
+3. Smoke test the live app: paste API key, pick a mode, run a full
+   Socratic interview + assemble cycle + try the edit chat
+4. **Meta-move the README opening** — dictate it through the live
+   app's interview, assemble with band-35, paste over the TODO
+   placeholder in `README.md`, commit + push. This is the "written
+   by the product itself" evidence.
+5. Record Loom walkthrough — include the 30-sec Socratic pushback
+   clip (vague answer → pushback → specific answer → advance)
+6. Draft submission email via HWP's email mode (meta-move #2)
+7. Capture `process/three-pane-orchestration.png` screenshot
+8. Final checklist pass → send to Ryan Beswick
+
+**Budget expectation:** 2–3h of engaged user time across all of
+Day 4. Log each engagement block to `mojo-log.jsonl` as you go
+(schema in `MOJO-SETUP.md`; `npm run mojo:report` aggregates).
+
+**Reference reads (in order):**
+1. This file
+2. `README.md` (see TODO marker for meta-move)
+3. `MOJO-SETUP.md`
+4. `process/decisions.md` + `process/future-experiments.md` if
+   preparing for Part 2 conversation
+
 ## Session summary
 
 Picked up from the Day 1 close handoff at

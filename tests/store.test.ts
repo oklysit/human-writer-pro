@@ -53,4 +53,59 @@ describe("useSessionStore", () => {
     expect(state.interview.turns).toEqual([]);
     expect(state.output).toBe("");
   });
+
+  // New Socratic engine state
+
+  it("has zero coverageScore, empty rubricItemsAddressed, null lastAssessment by default", () => {
+    const state = useSessionStore.getState();
+    expect(state.interview.coverageScore).toBe(0);
+    expect(state.interview.rubricItemsAddressed).toEqual([]);
+    expect(state.interview.lastAssessment).toBeNull();
+  });
+
+  it("setCoverageScore updates coverageScore", () => {
+    useSessionStore.getState().setCoverageScore(0.6);
+    expect(useSessionStore.getState().interview.coverageScore).toBe(0.6);
+  });
+
+  it("setRubricItemsAddressed replaces the full list", () => {
+    useSessionStore.getState().setRubricItemsAddressed(["opener hook", "credentials"]);
+    expect(useSessionStore.getState().interview.rubricItemsAddressed).toEqual(["opener hook", "credentials"]);
+  });
+
+  it("addRubricItemsAddressed appends new items, deduplicates", () => {
+    useSessionStore.getState().setRubricItemsAddressed(["opener hook"]);
+    useSessionStore.getState().addRubricItemsAddressed(["opener hook", "credentials"]); // opener hook is a dup
+    expect(useSessionStore.getState().interview.rubricItemsAddressed).toEqual(["opener hook", "credentials"]);
+  });
+
+  it("addRubricItemsAddressed is case-insensitive when deduplicating", () => {
+    useSessionStore.getState().setRubricItemsAddressed(["Opener Hook"]);
+    useSessionStore.getState().addRubricItemsAddressed(["opener hook"]); // same item, different case
+    expect(useSessionStore.getState().interview.rubricItemsAddressed).toEqual(["Opener Hook"]);
+  });
+
+  it("setLastAssessment stores the assessment", () => {
+    useSessionStore.getState().setLastAssessment({ level: "partial", reasoning: "Needs more detail." });
+    const { lastAssessment } = useSessionStore.getState().interview;
+    expect(lastAssessment?.level).toBe("partial");
+    expect(lastAssessment?.reasoning).toBe("Needs more detail.");
+  });
+
+  it("setLastAssessment can be set to null", () => {
+    useSessionStore.getState().setLastAssessment({ level: "sufficient", reasoning: "Good." });
+    useSessionStore.getState().setLastAssessment(null);
+    expect(useSessionStore.getState().interview.lastAssessment).toBeNull();
+  });
+
+  it("setMode resets coverageScore, rubricItemsAddressed, lastAssessment", () => {
+    useSessionStore.getState().setCoverageScore(0.8);
+    useSessionStore.getState().setRubricItemsAddressed(["opener hook"]);
+    useSessionStore.getState().setLastAssessment({ level: "sufficient", reasoning: "OK." });
+    useSessionStore.getState().setMode("blog");
+    const state = useSessionStore.getState();
+    expect(state.interview.coverageScore).toBe(0);
+    expect(state.interview.rubricItemsAddressed).toEqual([]);
+    expect(state.interview.lastAssessment).toBeNull();
+  });
 });

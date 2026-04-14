@@ -1,6 +1,29 @@
 import Anthropic from "@anthropic-ai/sdk";
 
+/**
+ * Local OAuth dev mode (NEXT_PUBLIC_USE_LOCAL_OAUTH=1) routes Anthropic SDK
+ * calls through /api/v1/messages instead of api.anthropic.com. The proxy
+ * route uses the user's Claude Max OAuth credentials via the Agent SDK,
+ * letting prompt iteration happen without burning API key budget.
+ *
+ * In dev mode the apiKey can be any non-empty string — the proxy ignores it.
+ * The sk-ant- prefix check is skipped accordingly.
+ */
+const useLocalOAuth =
+  typeof process !== "undefined" &&
+  process.env?.NEXT_PUBLIC_USE_LOCAL_OAUTH === "1";
+
 export function createAnthropicClient(apiKey: string): Anthropic {
+  if (useLocalOAuth) {
+    if (!apiKey) {
+      throw new Error("API key field cannot be empty (any value works in local OAuth mode)");
+    }
+    return new Anthropic({
+      apiKey,
+      baseURL: "/api",
+      dangerouslyAllowBrowser: true,
+    });
+  }
   if (!apiKey || !apiKey.startsWith("sk-ant-")) {
     throw new Error("Invalid Anthropic API key — must start with 'sk-ant-'");
   }
@@ -18,6 +41,13 @@ export type StreamCallbacks = {
 
 /**
  * Stream a Claude response. Writes incremental chunks via onDelta, final via onComplete.
+ *
+ * In local OAuth dev mode (NEXT_PUBLIC_USE_LOCAL_OAUTH=1), streaming is
+ * sacrificed: the JSON proxy route at /api/v1/messages does not implement
+ * SSE, so we fall back to a single non-streaming messages.create() call and
+ * synthesize one onDelta with the full text followed by onComplete. Tradeoff:
+ * the typing-effect UX disappears in dev, but we keep the same callsite shape
+ * so callers don't need a branch.
  */
 export async function streamClaude(
   client: Anthropic,
@@ -34,6 +64,25 @@ export async function streamClaude(
   },
   callbacks: StreamCallbacks
 ): Promise<void> {
+  if (useLocalOAuth) {
+    try {
+      const response = await client.messages.create({
+        model,
+        max_tokens: maxTokens,
+        system: systemPrompt,
+        messages,
+      });
+      const firstBlock = response.content[0];
+      const fullText =
+        firstBlock && firstBlock.type === "text" ? firstBlock.text : "";
+      callbacks.onDelta(fullText);
+      callbacks.onComplete(fullText);
+    } catch (err) {
+      callbacks.onError(err instanceof Error ? err : new Error(String(err)));
+    }
+    return;
+  }
+
   let fullText = "";
   try {
     const stream = client.messages.stream({

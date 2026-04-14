@@ -256,3 +256,66 @@ describe("highlightSegments", () => {
     expect(matchSeg?.text).toBe("Robust");
   });
 });
+
+// ---------------------------------------------------------------------------
+// detect() — question-echo category (consultant fix #3, 2026-04-15)
+// ---------------------------------------------------------------------------
+
+describe("detect — question-echo patterns", () => {
+  it("flags 'The single thing I want a hiring manager to know is...' as the-X-thing-is", () => {
+    const text = "The single thing I want a hiring manager to know is that I'm obsessive.";
+    const matches = detect(text);
+    const echo = matches.find((m) => m.category === "question-echo");
+    expect(echo).toBeDefined();
+    expect(echo!.pattern).toBe("the-X-thing-is");
+    expect(echo!.position).toBe(0);
+  });
+
+  it("flags 'In response to your question...' as in-response-to", () => {
+    const text = "In response to your question, I bring three things.";
+    const matches = detect(text);
+    const echo = matches.find((m) => m.category === "question-echo");
+    expect(echo).toBeDefined();
+    expect(echo!.pattern).toBe("in-response-to");
+  });
+
+  it("flags 'My answer to this is...' as my-answer-is", () => {
+    const text = "My answer to this is straightforward.";
+    const matches = detect(text);
+    const echo = matches.find((m) => m.category === "question-echo");
+    expect(echo).toBeDefined();
+    expect(echo!.pattern).toBe("my-answer-is");
+  });
+
+  it("flags 'What I learned is that...' as what-X-is-that", () => {
+    const text = "What I learned is that AI is going to change the field.";
+    const matches = detect(text);
+    const echo = matches.find((m) => m.category === "question-echo");
+    expect(echo).toBeDefined();
+    expect(echo!.pattern).toBe("what-X-is-that");
+  });
+
+  it("does not flag normal prose without question-echo openers", () => {
+    const text = "I built a RAG study tool. It works well. The codebase is small.";
+    const matches = detect(text);
+    expect(matches.filter((m) => m.category === "question-echo")).toHaveLength(0);
+  });
+
+  it("matches at line starts in multiline text (paragraph openers)", () => {
+    const text = "First paragraph here.\n\nIn response to that, here is more.";
+    const matches = detect(text);
+    const echo = matches.find((m) => m.category === "question-echo");
+    expect(echo).toBeDefined();
+    expect(echo!.pattern).toBe("in-response-to");
+    // Position should be at the start of the second paragraph, not 0
+    expect(echo!.position).toBeGreaterThan(0);
+  });
+
+  it("legacy word-pattern matches do not get a category tag", () => {
+    const text = "We can leverage this opportunity.";
+    const matches = detect(text);
+    const leverage = matches.find((m) => m.pattern === "leverage");
+    expect(leverage).toBeDefined();
+    expect(leverage!.category).toBeUndefined();
+  });
+});

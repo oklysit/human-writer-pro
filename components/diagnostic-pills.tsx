@@ -13,8 +13,15 @@ import { cn } from "@/lib/utils"
 
 // Exported so Task 17b can conform to this shape when building the detector.
 export type AIIsmMatch = {
-  pattern: string  // the literal word/phrase matched, e.g., "leverage"
+  pattern: string  // the literal word/phrase matched, or rule name for question-echo
   position: number // character offset into the output where the match begins
+  /**
+   * Optional category. "question-echo" for the regex-based rules added
+   * 2026-04-15 to catch "The single thing I want..." / "In response to..."
+   * style answer-prefix tells. Undefined for legacy banned-isms /
+   * anti-pattern word matches.
+   */
+  category?: string
 }
 
 type DiagnosticPillsProps = {

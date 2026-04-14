@@ -25,6 +25,14 @@ export type LastAssessment = {
 export type AppState = {
   apiKey: string | null;
   mode: Mode | null;
+  /**
+   * Free-form context the user pastes/types before or during the interview
+   * (assignment text, JD, thesis, "I'm writing X for class Y", etc).
+   * Read ONLY by the interview stage prompt — never reaches the assembly
+   * call. Per the 2026-04-14 strip: the assembly stage stays at the band-35
+   * pilot prompt + raw interview, no other context.
+   */
+  contextNotes: string;
   interview: {
     turns: InterviewTurn[];
     rawTranscript: string;
@@ -43,6 +51,7 @@ export type AppState = {
 type AppActions = {
   setApiKey: (key: string | null) => void;
   setMode: (mode: Mode) => void;
+  setContextNotes: (notes: string) => void;
   addInterviewTurn: (turn: InterviewTurn) => void;
   setInterviewStatus: (status: AppState["interview"]["status"]) => void;
   setCoverageScore: (score: number) => void;
@@ -60,6 +69,7 @@ type AppActions = {
 const initialState: AppState = {
   apiKey: null,
   mode: null,
+  contextNotes: "",
   interview: {
     turns: [],
     rawTranscript: "",
@@ -85,12 +95,15 @@ export const useSessionStore = create<AppState & AppActions>()(
       setMode: (mode) =>
         set({
           mode,
+          contextNotes: "",
           interview: { ...initialState.interview },
           output: "",
           vrScore: null,
           edits: [],
           error: null,
         }),
+
+      setContextNotes: (contextNotes) => set({ contextNotes }),
 
       addInterviewTurn: (turn) =>
         set((state) => ({

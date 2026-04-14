@@ -16,11 +16,13 @@ export function InterviewPanel() {
   // ---------------------------------------------------------------------------
   const apiKey = useSessionStore((s) => s.apiKey);
   const mode = useSessionStore((s) => s.mode);
+  const contextNotes = useSessionStore((s) => s.contextNotes);
   const turns = useSessionStore((s) => s.interview.turns);
   const coverageScore = useSessionStore((s) => s.interview.coverageScore);
   const lastAssessment = useSessionStore((s) => s.interview.lastAssessment);
   const rawTranscript = useSessionStore((s) => s.interview.rawTranscript);
 
+  const setContextNotes = useSessionStore((s) => s.setContextNotes);
   const addInterviewTurn = useSessionStore((s) => s.addInterviewTurn);
   const setLastAssessment = useSessionStore((s) => s.setLastAssessment);
   const setCoverageScore = useSessionStore((s) => s.setCoverageScore);
@@ -107,7 +109,12 @@ export function InterviewPanel() {
       if (!mode || !apiKey) return;
       setLoading(true);
       try {
-        const result = await askNextQuestion({ mode, apiKey, history: [] });
+        const result = await askNextQuestion({
+          mode,
+          apiKey,
+          history: [],
+          contextNotes,
+        });
         if (cancelled) return;
         setLastAssessment(result.priorAssessment);
         setCoverageScore(result.coverageScore);
@@ -171,6 +178,7 @@ export function InterviewPanel() {
         mode,
         apiKey,
         history: currentTurns,
+        contextNotes,
       });
       setLastAssessment(result.priorAssessment);
       setCoverageScore(result.coverageScore);
@@ -232,6 +240,29 @@ export function InterviewPanel() {
           Question {userTurnCount > 0 ? userTurnCount + 1 : 1} of ~7
         </span>
       </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* 1b. Context (optional, per-interview)                                */}
+      {/* Free-form text the interviewer reads to ask better questions.        */}
+      {/* Never reaches the assembly call — see lib/store.ts contextNotes.     */}
+      {/* ------------------------------------------------------------------ */}
+      <details className="border-b border-border shrink-0 group">
+        <summary className="px-5 py-2 cursor-pointer label-caps text-muted-foreground hover:text-foreground select-none flex items-center justify-between">
+          <span>
+            Context {contextNotes.trim() ? `· ${contextNotes.trim().length} chars` : "· optional"}
+          </span>
+          <span className="font-mono text-xs opacity-50 group-open:opacity-100">▾</span>
+        </summary>
+        <div className="px-5 pb-3">
+          <Textarea
+            value={contextNotes}
+            onChange={(e) => setContextNotes(e.target.value)}
+            placeholder="Paste an assignment, JD, thesis, or a sentence about what you're working on. The interviewer reads this to ask better questions. Never reaches the final draft."
+            rows={6}
+            className="resize-y font-mono text-xs"
+          />
+        </div>
+      </details>
 
       {/* ------------------------------------------------------------------ */}
       {/* 2. Coverage progress bar                                            */}

@@ -185,8 +185,21 @@ export function useVoiceInput(opts: UseVoiceInputOptions = {}): UseVoiceInputRet
 
   const stop = React.useCallback(() => {
     if (!recording || !recognitionRef.current) return;
+    // Null handlers FIRST so any chunks already in the recognition pipeline
+    // (typically the last few words still being processed when the user hit
+    // submit) cannot fire onresult and re-populate the textarea after the
+    // caller cleared it. Without this, voice-recognition lag would leak the
+    // tail of the previous answer into the next turn's input. (2026-04-15
+    // bug: user observed "final 3 lines or so" of prior response remaining
+    // in the textbox after submit.)
+    recognitionRef.current.onresult = null;
+    recognitionRef.current.onerror = null;
+    recognitionRef.current.onend = null;
     recognitionRef.current.stop();
-    // State is updated via onend handler
+    recognitionRef.current = null;
+    setRecording(false);
+    setInterimTranscript("");
+    startingRef.current = false;
   }, [recording]);
 
   const reset = React.useCallback(() => {

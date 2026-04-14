@@ -36,4 +36,6 @@ yarn-error.log*
 next-env.d.ts
 
 # eval run outputs (generated, not committed)
-/eval/reports/
+# — but keep the VR validation analysis report, which is a written artifact
+/eval/reports/*
+!/eval/reports/vr-validation.md

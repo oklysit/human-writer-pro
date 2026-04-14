@@ -21,6 +21,7 @@ export function InterviewPanel() {
   const coverageScore = useSessionStore((s) => s.interview.coverageScore);
   const lastAssessment = useSessionStore((s) => s.interview.lastAssessment);
   const rawTranscript = useSessionStore((s) => s.interview.rawTranscript);
+  const interviewStatus = useSessionStore((s) => s.interview.status);
 
   const setContextNotes = useSessionStore((s) => s.setContextNotes);
   const addInterviewTurn = useSessionStore((s) => s.addInterviewTurn);
@@ -119,11 +120,16 @@ export function InterviewPanel() {
         setLastAssessment(result.priorAssessment);
         setCoverageScore(result.coverageScore);
         addRubricItemsAddressed(result.rubricItemsAddressedThisTurn);
-        addInterviewTurn({
-          role: "assistant",
-          content: result.question,
-          timestamp: new Date().toISOString(),
-        });
+        // Skip empty assistant turns — the model emits "" when it considers
+        // the interview ready, and rendering an empty turn shows as blank
+        // dead space in the transcript instead of a clear "ready" signal.
+        if (result.question.trim().length > 0) {
+          addInterviewTurn({
+            role: "assistant",
+            content: result.question,
+            timestamp: new Date().toISOString(),
+          });
+        }
         if (result.readyToAssemble) {
           setInterviewStatus("ready-to-assemble");
         }
@@ -190,11 +196,14 @@ export function InterviewPanel() {
       setLastAssessment(result.priorAssessment);
       setCoverageScore(result.coverageScore);
       addRubricItemsAddressed(result.rubricItemsAddressedThisTurn);
-      addInterviewTurn({
-        role: "assistant",
-        content: result.question,
-        timestamp: new Date().toISOString(),
-      });
+      // Skip empty assistant turns (see kickoff above for rationale).
+      if (result.question.trim().length > 0) {
+        addInterviewTurn({
+          role: "assistant",
+          content: result.question,
+          timestamp: new Date().toISOString(),
+        });
+      }
       if (result.readyToAssemble) {
         setInterviewStatus("ready-to-assemble");
       }
@@ -389,6 +398,18 @@ export function InterviewPanel() {
       {/* 6 + 7. Input area + voice placeholder                               */}
       {/* ------------------------------------------------------------------ */}
       <div className="px-5 py-4 border-t border-border shrink-0 flex flex-col gap-2">
+        {/* Ready-to-assemble banner — model has decided it has enough material.
+            Shown above the input so it's the first thing the user sees on the
+            way to typing more or hitting Assemble. The textarea stays active
+            so the user can still add more if they want. */}
+        {interviewStatus === "ready-to-assemble" && (
+          <div className="rounded-sm border border-accent/40 bg-accent/10 px-3 py-2">
+            <p className="font-mono text-xs text-accent">
+              Ready to assemble — click <span className="font-semibold">Assemble →</span> below, or add anything else you'd like to mention.
+            </p>
+          </div>
+        )}
+
         {/* Inline API key error */}
         {inlineError && (
           <p className="font-mono text-xs text-destructive">{inlineError}</p>

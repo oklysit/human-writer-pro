@@ -11,8 +11,10 @@
 
 import { createAnthropicClient, streamClaude } from "./anthropic-client";
 import { composeInterviewPrompt } from "./prompts/compose";
+import { getSocraticEditQuestionPrompt, getLocalizedRestitchPrompt } from "./prompts/steps/edit";
 import { parseModelResponse, type TurnResult } from "./coverage";
 import type { Mode, InterviewTurn } from "./store";
+import type { ModeConfig } from "./prompts/modes";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -91,6 +93,53 @@ export async function askNextQuestion(input: EngineInput): Promise<EngineOutput>
   }
 
   return { ...parsed, fallback: false };
+}
+
+// ---------------------------------------------------------------------------
+// askSocraticEditQuestion
+// ---------------------------------------------------------------------------
+
+/**
+ * Call 1 of the Socratic edit cycle.
+ * Given the flagged paragraph and the user's initial complaint, returns ONE
+ * targeted question that surfaces what the user actually wants to say.
+ */
+export async function askSocraticEditQuestion(options: {
+  apiKey: string;
+  selectedParagraph: string;
+  userComplaint: string;
+}): Promise<string> {
+  const { apiKey, selectedParagraph, userComplaint } = options;
+  const client = createAnthropicClient(apiKey);
+  const systemPrompt = getSocraticEditQuestionPrompt(selectedParagraph, userComplaint);
+  return collectStream(client, systemPrompt, [
+    { role: "user", content: "Ask your question." },
+  ]);
+}
+
+// ---------------------------------------------------------------------------
+// localizedRestitch
+// ---------------------------------------------------------------------------
+
+/**
+ * Call 2 of the Socratic edit cycle.
+ * Given the flagged paragraph, the user's verbatim answer, the mode config,
+ * and the raw interview (for voice context), returns a restitched paragraph
+ * that incorporates the user's new verbatim as primary material.
+ */
+export async function localizedRestitch(options: {
+  apiKey: string;
+  mode: ModeConfig;
+  rawInterview: string;
+  paragraph: string;
+  newVerbatim: string;
+}): Promise<string> {
+  const { apiKey, mode, rawInterview, paragraph, newVerbatim } = options;
+  const client = createAnthropicClient(apiKey);
+  const systemPrompt = getLocalizedRestitchPrompt(mode, rawInterview, paragraph, newVerbatim);
+  return collectStream(client, systemPrompt, [
+    { role: "user", content: "Restitch the paragraph now." },
+  ]);
 }
 
 // ---------------------------------------------------------------------------

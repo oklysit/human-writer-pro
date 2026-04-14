@@ -11,7 +11,7 @@
 
 import { createAnthropicClient, streamClaude } from "./anthropic-client";
 import { composeInterviewPrompt } from "./prompts/compose";
-import { parseModelResponse, canAssemble, type TurnResult } from "./coverage";
+import { parseModelResponse, type TurnResult } from "./coverage";
 import type { Mode, InterviewTurn } from "./store";
 
 // ---------------------------------------------------------------------------

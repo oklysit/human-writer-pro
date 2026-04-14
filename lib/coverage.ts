@@ -99,11 +99,21 @@ export function parseModelResponse(raw: string): TurnResult | null {
   const pa = parsed["prior_assessment"];
   if (pa !== null && typeof pa === "object") {
     const paObj = pa as Record<string, unknown>;
+    const validLevels = ["sufficient", "partial", "insufficient"] as const;
+    const rawLevel = paObj["level"];
+    const level = validLevels.includes(rawLevel as "sufficient" | "partial" | "insufficient")
+      ? (rawLevel as AssessmentLevel)
+      : null;
     priorAssessment = {
-      level: (paObj["level"] as AssessmentLevel) ?? null,
+      level,
       reasoning: typeof paObj["reasoning"] === "string" ? paObj["reasoning"] : "",
     };
   }
+
+  // Clamp coverage_score to [0, 1]; guard against non-numeric values
+  const rawScore = parsed["coverage_score"];
+  const coverageScore =
+    typeof rawScore === "number" ? Math.max(0, Math.min(1, rawScore)) : 0;
 
   return {
     question: typeof parsed["question"] === "string" ? parsed["question"] : "",
@@ -113,7 +123,7 @@ export function parseModelResponse(raw: string): TurnResult | null {
           (x): x is string => typeof x === "string"
         )
       : [],
-    coverageScore: typeof parsed["coverage_score"] === "number" ? parsed["coverage_score"] : 0,
+    coverageScore,
     readyToAssemble: Boolean(parsed["ready_to_assemble"]),
   };
 }

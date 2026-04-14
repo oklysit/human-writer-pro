@@ -151,6 +151,106 @@ describe("parseModelResponse", () => {
     const result = parseModelResponse(assemblyJSON);
     expect(result?.readyToAssemble).toBe(true);
   });
+
+  // --- coverage_score clamping (Fix #1) ---
+
+  it("clamps coverage_score 1.5 to 1.0", () => {
+    const json = JSON.stringify({
+      question: "Q?",
+      prior_assessment: null,
+      rubric_items_addressed_this_turn: [],
+      coverage_score: 1.5,
+      ready_to_assemble: false,
+    });
+    const result = parseModelResponse(json);
+    expect(result?.coverageScore).toBe(1.0);
+  });
+
+  it("clamps coverage_score -0.3 to 0.0", () => {
+    const json = JSON.stringify({
+      question: "Q?",
+      prior_assessment: null,
+      rubric_items_addressed_this_turn: [],
+      coverage_score: -0.3,
+      ready_to_assemble: false,
+    });
+    const result = parseModelResponse(json);
+    expect(result?.coverageScore).toBe(0.0);
+  });
+
+  it("clamps non-numeric coverage_score to 0", () => {
+    const json = JSON.stringify({
+      question: "Q?",
+      prior_assessment: null,
+      rubric_items_addressed_this_turn: [],
+      coverage_score: "not a number",
+      ready_to_assemble: false,
+    });
+    const result = parseModelResponse(json);
+    expect(result?.coverageScore).toBe(0);
+  });
+
+  // --- prior_assessment.level validation (Fix #2) ---
+
+  it("normalizes prior_assessment.level 'weird-value' to null", () => {
+    const json = JSON.stringify({
+      question: "Q?",
+      prior_assessment: { level: "weird-value", reasoning: "hmm" },
+      rubric_items_addressed_this_turn: [],
+      coverage_score: 0.5,
+      ready_to_assemble: false,
+    });
+    const result = parseModelResponse(json);
+    expect(result?.priorAssessment?.level).toBeNull();
+  });
+
+  it("preserves prior_assessment.level 'sufficient'", () => {
+    const json = JSON.stringify({
+      question: "Q?",
+      prior_assessment: { level: "sufficient", reasoning: "Good." },
+      rubric_items_addressed_this_turn: [],
+      coverage_score: 0.5,
+      ready_to_assemble: false,
+    });
+    const result = parseModelResponse(json);
+    expect(result?.priorAssessment?.level).toBe("sufficient");
+  });
+
+  it("preserves prior_assessment.level 'partial'", () => {
+    const json = JSON.stringify({
+      question: "Q?",
+      prior_assessment: { level: "partial", reasoning: "Needs more." },
+      rubric_items_addressed_this_turn: [],
+      coverage_score: 0.3,
+      ready_to_assemble: false,
+    });
+    const result = parseModelResponse(json);
+    expect(result?.priorAssessment?.level).toBe("partial");
+  });
+
+  it("preserves prior_assessment.level 'insufficient'", () => {
+    const json = JSON.stringify({
+      question: "Q?",
+      prior_assessment: { level: "insufficient", reasoning: "Too sparse." },
+      rubric_items_addressed_this_turn: [],
+      coverage_score: 0.1,
+      ready_to_assemble: false,
+    });
+    const result = parseModelResponse(json);
+    expect(result?.priorAssessment?.level).toBe("insufficient");
+  });
+
+  it("preserves prior_assessment: null → priorAssessment null (turn 0 invariant)", () => {
+    const json = JSON.stringify({
+      question: "Tell me about the job.",
+      prior_assessment: null,
+      rubric_items_addressed_this_turn: [],
+      coverage_score: 0.0,
+      ready_to_assemble: false,
+    });
+    const result = parseModelResponse(json);
+    expect(result?.priorAssessment).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------

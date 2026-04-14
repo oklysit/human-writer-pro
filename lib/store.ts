@@ -108,8 +108,13 @@ export const useSessionStore = create<AppState & AppActions>()(
       setInterviewStatus: (status) =>
         set((state) => ({ interview: { ...state.interview, status } })),
 
-      setCoverageScore: (coverageScore) =>
-        set((state) => ({ interview: { ...state.interview, coverageScore } })),
+      setCoverageScore: (score) =>
+        set((state) => ({
+          interview: {
+            ...state.interview,
+            coverageScore: Math.max(0, Math.min(1, score)),
+          },
+        })),
 
       setRubricItemsAddressed: (rubricItemsAddressed) =>
         set((state) => ({ interview: { ...state.interview, rubricItemsAddressed } })),

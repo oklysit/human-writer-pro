@@ -163,3 +163,32 @@ export function countUserWords(turns: InterviewTurn[]): number {
   }
   return total;
 }
+
+// ---------------------------------------------------------------------------
+// stripInterviewQuestions
+// ---------------------------------------------------------------------------
+
+/**
+ * Build the assembly-stage user-message string from interview turns.
+ *
+ * Per the 2026-04-15 consultant fix: ONLY user-answer text reaches the
+ * assembly prompt. No questions, no speaker labels, no Q:/A: framing.
+ * If the model never sees a question in its input, it can't echo the
+ * question's phrasing in its output ("the single thing I want a hiring
+ * manager to know is that I'm obsessive" → only emerges when the model
+ * sees the question that prompted it). This eliminates the question-echo
+ * failure mode at the source.
+ *
+ * Each user answer is trimmed and joined by a single blank line. Empty
+ * answers are dropped. Defensive: even though the store currently builds
+ * rawTranscript from user turns only, this named helper makes the
+ * invariant explicit and survives any future code path that pipes
+ * `turns` directly to assembly.
+ */
+export function stripInterviewQuestions(turns: InterviewTurn[]): string {
+  return turns
+    .filter((t) => t.role === "user")
+    .map((t) => t.content.trim())
+    .filter((s) => s.length > 0)
+    .join("\n\n");
+}

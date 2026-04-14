@@ -6,6 +6,8 @@ export type AssembleOptions = {
   mode: ModeConfig;
   apiKey: string;
   rawInterview: string;
+  /** Optional list of banned patterns to inject into the assembly prompt. */
+  bannedPatterns?: string[];
   onToken: (delta: string) => void;
   onComplete: (fullText: string) => void;
   onError: (message: string) => void;
@@ -22,12 +24,12 @@ export type AssembleOptions = {
  * the fact. Streaming tokens already in-flight will be swallowed.
  */
 export function assemble(options: AssembleOptions): { cancel: () => void } {
-  const { mode, apiKey, rawInterview, onToken, onComplete, onError } = options;
+  const { mode, apiKey, rawInterview, bannedPatterns, onToken, onComplete, onError } = options;
 
   let cancelled = false;
 
   const client = createAnthropicClient(apiKey);
-  const systemPrompt = getAssemblySystemPrompt(mode, rawInterview);
+  const systemPrompt = getAssemblySystemPrompt(mode, rawInterview, bannedPatterns);
 
   streamClaude(
     client,

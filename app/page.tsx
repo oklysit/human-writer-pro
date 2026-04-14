@@ -10,6 +10,7 @@ import { PreviewPanel } from "@/components/preview-panel";
 import { EditChat } from "@/components/edit-chat";
 import { useSessionStore, useCanAssemble } from "@/lib/store";
 import { assemble } from "@/lib/assemble";
+import type { AIIsmMatch } from "@/lib/ai-ism-detector";
 import { getMode } from "@/lib/prompts/modes";
 import { cn } from "@/lib/utils";
 
@@ -110,6 +111,47 @@ export default function HomePage() {
   }, []);
 
   // ---------------------------------------------------------------------------
+  // Regenerate handler — called from PreviewPanel when user clicks
+  // "Regenerate avoiding these" in DiagnosticPills.
+  // ---------------------------------------------------------------------------
+  function handleRegenerate(matches: AIIsmMatch[]): void {
+    if (!apiKey || !mode) return;
+
+    const modeConfig = getMode(mode);
+    const rawInterview = useSessionStore.getState().interview.rawTranscript;
+
+    // Deduplicate patterns before injecting into the prompt.
+    const bannedPatterns = Array.from(new Set(matches.map((m) => m.pattern)));
+
+    cancelRef.current?.();
+
+    setGenerating(true);
+    setOutput("");
+    setVRScore(null);
+
+    const { cancel } = assemble({
+      mode: modeConfig,
+      apiKey,
+      rawInterview,
+      bannedPatterns,
+      onToken: (delta) => {
+        const current = useSessionStore.getState().output;
+        useSessionStore.getState().setOutput(current + delta);
+      },
+      onComplete: (fullText) => {
+        setOutput(fullText);
+        setGenerating(false);
+      },
+      onError: (msg) => {
+        setError(msg);
+        setGenerating(false);
+      },
+    });
+
+    cancelRef.current = cancel;
+  }
+
+  // ---------------------------------------------------------------------------
   // Derived flags
   // ---------------------------------------------------------------------------
   const apiKeyMissing = apiKey === null;
@@ -194,7 +236,7 @@ export default function HomePage() {
               editChatActive && "shrink"
             )}
           >
-            <PreviewPanel />
+            <PreviewPanel onRegenerate={handleRegenerate} />
 
             {/* "Edit paragraph" float button — appears on valid selection */}
             {showEditPrompt && pendingSelection && !editChatActive && (

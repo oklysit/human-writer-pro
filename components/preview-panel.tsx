@@ -1,33 +1,52 @@
 "use client";
 
 import * as React from "react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { useSessionStore } from "@/lib/store";
 import { computeVR } from "@/lib/verbatim-ratio";
+import { detect } from "@/lib/ai-ism-detector";
+import type { AIIsmMatch } from "@/lib/ai-ism-detector";
 import { DiagnosticPills } from "@/components/diagnostic-pills";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
-export function PreviewPanel({ className }: { className?: string }): JSX.Element {
+type PreviewPanelProps = {
+  className?: string;
+  /** Called when the user clicks "Regenerate avoiding these" in DiagnosticPills. */
+  onRegenerate?: (matches: AIIsmMatch[]) => void;
+};
+
+export function PreviewPanel({ className, onRegenerate }: PreviewPanelProps): JSX.Element {
   const output = useSessionStore((s) => s.output);
   const isGenerating = useSessionStore((s) => s.isGenerating);
   const vrScore = useSessionStore((s) => s.vrScore);
   const setVRScore = useSessionStore((s) => s.setVRScore);
   const mode = useSessionStore((s) => s.mode);
 
+  const [aiIsmMatches, setAiIsmMatches] = useState<AIIsmMatch[]>([]);
+
   const { toast } = useToast();
 
-  // Compute VR score once streaming completes.
+  // Compute VR score and run AI-ism detection once streaming completes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!isGenerating && output.length > 0 && vrScore === null) {
       const rawInterview = useSessionStore.getState().interview.rawTranscript;
       const result = computeVR(rawInterview, output);
       setVRScore(result);
+      // Run the AI-ism detector on the completed output.
+      setAiIsmMatches(detect(output));
     }
   }, [isGenerating, output, vrScore, setVRScore]);
+
+  // Clear AI-ism matches when output is cleared (e.g., on a new assemble run).
+  useEffect(() => {
+    if (output.length === 0) {
+      setAiIsmMatches([]);
+    }
+  }, [output]);
 
   const wordCount = useMemo(() => {
     if (!output) return 0;
@@ -103,8 +122,8 @@ export function PreviewPanel({ className }: { className?: string }): JSX.Element
             <>
               <DiagnosticPills
                 vrResult={vrScore}
-                aiIsmMatches={[]}
-                onRegenerate={() => {}}
+                aiIsmMatches={aiIsmMatches}
+                onRegenerate={() => onRegenerate?.(aiIsmMatches)}
               />
 
               {/* Footer actions */}

@@ -1,6 +1,18 @@
 import type { ModeConfig } from "../modes";
 
-export function getAssemblySystemPrompt(mode: ModeConfig, rawInterview: string): string {
+export function getAssemblySystemPrompt(
+  mode: ModeConfig,
+  rawInterview: string,
+  bannedPatterns?: string[]
+): string {
+  const bannedSection =
+    bannedPatterns && bannedPatterns.length > 0
+      ? `BANNED PHRASES (do NOT use these in the output):
+${bannedPatterns.join(", ")}
+
+`
+      : "";
+
   return `
 You are assembling a polished ${mode.displayName} from the user's interview responses.
 
@@ -28,7 +40,7 @@ DO NOT:
 - Paraphrase when verbatim would work.
 - Over-polish. The piece should read like the user wrote it, not like GPT wrote it.
 
-${mode.systemAddition}
+${bannedSection}${mode.systemAddition}
 
 Target length: ~${mode.targetWords} words.
 

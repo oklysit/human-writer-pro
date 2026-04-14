@@ -206,7 +206,7 @@ export function InterviewPanel() {
             <div
               className={cn(
                 "h-full transition-all duration-500 rounded-sm",
-                isReady ? "bg-accent" : "bg-amber-700/70"
+                isReady ? "bg-accent" : "bg-warning/70"
               )}
               style={{ width: `${coveragePct}%` }}
             />
@@ -235,7 +235,7 @@ export function InterviewPanel() {
           <p
             className={cn(
               "font-mono text-xs",
-              lastAssessment.level === "sufficient" && "text-emerald-700 dark:text-emerald-400",
+              lastAssessment.level === "sufficient" && "text-success",
               lastAssessment.level === "partial" && "text-accent",
               lastAssessment.level === "insufficient" && "text-destructive"
             )}
@@ -271,7 +271,7 @@ export function InterviewPanel() {
               className={cn(
                 "pl-3 py-1",
                 isAssistant
-                  ? "border-l-2 border-amber-700"
+                  ? "border-l-2 border-warning"
                   : "border-l-2 border-border"
               )}
             >
@@ -294,9 +294,9 @@ export function InterviewPanel() {
 
         {/* Loading indicator — thin editorial progress pulse */}
         {loading && (
-          <div className="pl-3 py-1 border-l-2 border-amber-700/40">
+          <div className="pl-3 py-1 border-l-2 border-warning/40">
             <div className="h-1 w-24 bg-muted rounded-sm overflow-hidden">
-              <div className="h-full bg-amber-700/50 rounded-sm animate-pulse w-full" />
+              <div className="h-full bg-warning/50 rounded-sm animate-pulse w-full" />
             </div>
           </div>
         )}

@@ -54,9 +54,13 @@ export type EditChatProps = {
 function MicButton({
   voice,
   disabled,
+  onStop,
 }: {
   voice: UseVoiceInputReturn;
   disabled?: boolean;
+  /** Called after voice.stop() — lets parent restore focus to the textarea
+   *  so Enter submits instead of retoggling the mic button. */
+  onStop?: () => void;
 }): JSX.Element {
   if (!voice.supported) {
     return (
@@ -77,7 +81,14 @@ function MicButton({
   return (
     <button
       type="button"
-      onClick={() => (voice.recording ? voice.stop() : voice.start())}
+      onClick={() => {
+        if (voice.recording) {
+          voice.stop();
+          onStop?.();
+        } else {
+          voice.start();
+        }
+      }}
       disabled={disabled}
       aria-label={voice.recording ? "Stop voice input" : "Start voice input"}
       title={voice.recording ? "Stop recording" : "Start voice input"}
@@ -392,7 +403,10 @@ export function EditChat({ selectedParagraph, onClose, className }: EditChatProp
           <div className="flex items-center justify-between">
             <span className="font-mono text-xs text-muted-foreground">Enter to send · Shift+Enter for newline</span>
             <div className="flex items-center gap-2">
-              <MicButton voice={voiceComplaint} />
+              <MicButton
+                voice={voiceComplaint}
+                onStop={() => complaintTextareaRef.current?.focus()}
+              />
               <Button
                 size="sm"
                 onClick={handleSendComplaint}
@@ -434,7 +448,10 @@ export function EditChat({ selectedParagraph, onClose, className }: EditChatProp
           <div className="flex items-center justify-between">
             <span className="font-mono text-xs text-muted-foreground">Enter to send · Shift+Enter for newline</span>
             <div className="flex items-center gap-2">
-              <MicButton voice={voiceAnswer} />
+              <MicButton
+                voice={voiceAnswer}
+                onStop={() => answerTextareaRef.current?.focus()}
+              />
               <Button
                 size="sm"
                 onClick={handleSendAnswer}

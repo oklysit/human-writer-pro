@@ -392,7 +392,16 @@ export function PreviewPanel({
                       {voice.supported ? (
                         <button
                           type="button"
-                          onClick={() => (voice.recording ? voice.stop() : voice.start())}
+                          onClick={() => {
+                            if (voice.recording) {
+                              voice.stop();
+                              // Return focus to the textarea so Enter submits
+                              // instead of retoggling the mic button.
+                              feedbackTextareaRef.current?.focus();
+                            } else {
+                              voice.start();
+                            }
+                          }}
                           aria-label={voice.recording ? "Stop voice input" : "Start voice input"}
                           title={voice.recording ? "Stop recording" : "Start voice input"}
                           className={cn(

@@ -64,6 +64,13 @@ export type AppState = {
    * real interview transcript in the upload flow. Null otherwise.
    */
   uploadedDraftContent: string | null;
+  /**
+   * Optional explicit word-count target for the assembler. null = let the
+   * model infer from genre + context. When set, the assembler receives
+   * "Target word count: ~N words" as an override. User sets this via the
+   * slider/input near the Assemble button.
+   */
+  targetWords: number | null;
   vrScore: VRResult | null;
   edits: EditTurn[];
   isGenerating: boolean;
@@ -87,6 +94,7 @@ type AppActions = {
    * Called by the upload-to-output flow in preview-panel.
    */
   setUploadedDraft: (content: string) => void;
+  setTargetWords: (n: number | null) => void;
   setVRScore: (score: VRResult | null) => void;
   addEdit: (turn: EditTurn) => void;
   setGenerating: (isGen: boolean) => void;
@@ -107,6 +115,7 @@ const initialState: AppState = {
   output: "",
   outputSource: null,
   uploadedDraftContent: null,
+  targetWords: null,
   vrScore: null,
   edits: [],
   isGenerating: false,
@@ -175,6 +184,8 @@ export const useSessionStore = create<AppState & AppActions>()(
           uploadedDraftContent: content,
           vrScore: null,
         }),
+
+      setTargetWords: (n) => set({ targetWords: n }),
 
       setVRScore: (score) => set({ vrScore: score }),
 

@@ -92,55 +92,42 @@ export function InterviewPanel() {
   }, [turns]);
 
   // ---------------------------------------------------------------------------
-  // Auto-first-question on mount when mode + apiKey present and turns empty
+  // Kickoff — user-triggered (not auto on mode change)
   // ---------------------------------------------------------------------------
-  React.useEffect(() => {
+  // Per user 2026-04-15: mode selection alone should NOT trigger the first
+  // question. Workflow is now context-first — user fills the Context panel
+  // (recommended), then explicitly clicks "Start Interview" to fire the
+  // model's first question. Without this, the model defaults to generic
+  // "what are you applying for?" openers even when the context already
+  // tells it.
+  async function kickoff() {
     if (!mode || !apiKey || turns.length > 0 || loading) return;
-
-    let cancelled = false;
-
-    async function kickoff() {
-      if (!mode || !apiKey) return;
-      setLoading(true);
-      try {
-        const result = await askNextQuestion({
-          mode,
-          apiKey,
-          history: [],
-          contextNotes,
+    setLoading(true);
+    try {
+      const result = await askNextQuestion({
+        mode,
+        apiKey,
+        history: [],
+        contextNotes,
+      });
+      setLastAssessment(result.priorAssessment);
+      if (result.question.trim().length > 0) {
+        addInterviewTurn({
+          role: "assistant",
+          content: result.question,
+          timestamp: new Date().toISOString(),
         });
-        if (cancelled) return;
-        setLastAssessment(result.priorAssessment);
-        // Skip empty assistant turns — defensive in case the model emits ""
-        // (the new adaptive-interviewer prompt asks the model to put any
-        // readiness signal in the question text directly, so empty should
-        // be rare, but cheap to guard against).
-        if (result.question.trim().length > 0) {
-          addInterviewTurn({
-            role: "assistant",
-            content: result.question,
-            timestamp: new Date().toISOString(),
-          });
-        }
-        if (result.readyToAssemble) {
-          setInterviewStatus("ready-to-assemble");
-        }
-      } catch (err) {
-        if (cancelled) return;
-        const msg = err instanceof Error ? err.message : "Failed to start interview.";
-        setError(msg);
-      } finally {
-        if (!cancelled) setLoading(false);
       }
+      if (result.readyToAssemble) {
+        setInterviewStatus("ready-to-assemble");
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to start interview.";
+      setError(msg);
+    } finally {
+      setLoading(false);
     }
-
-    void kickoff();
-
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, apiKey]);
+  }
 
   // ---------------------------------------------------------------------------
   // Submit handler
@@ -247,27 +234,29 @@ export function InterviewPanel() {
       </div>
 
       {/* ------------------------------------------------------------------ */}
-      {/* 1b. Context (optional, per-interview)                                */}
-      {/* Free-form text the interviewer reads to ask better questions.        */}
-      {/* Never reaches the assembly call — see lib/store.ts contextNotes.     */}
+      {/* 1b. Context — primary panel, always visible                         */}
+      {/* Free-form text the interviewer reads to ask better questions.       */}
+      {/* Never reaches the assembly call — see lib/store.ts contextNotes.    */}
+      {/* Pre-interview: larger textarea (encourages filling). During         */}
+      {/* interview: smaller, still editable.                                 */}
       {/* ------------------------------------------------------------------ */}
-      <details className="border-b border-border shrink-0 group">
-        <summary className="px-5 py-2 cursor-pointer label-caps text-muted-foreground hover:text-foreground select-none flex items-center justify-between">
-          <span>
-            Context {contextNotes.trim() ? `· ${contextNotes.trim().length} chars` : "· optional"}
-          </span>
-          <span className="font-mono text-xs opacity-50 group-open:opacity-100">▾</span>
-        </summary>
-        <div className="px-5 pb-3">
-          <Textarea
-            value={contextNotes}
-            onChange={(e) => setContextNotes(e.target.value)}
-            placeholder="Paste an assignment, JD, thesis, or a sentence about what you're working on. The interviewer reads this to ask better questions. Never reaches the final draft."
-            rows={6}
-            className="resize-y font-mono text-xs"
-          />
+      <div className="px-5 py-3 border-b border-border shrink-0">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="label-caps text-foreground">Context</span>
+          {contextNotes.trim() && (
+            <span className="font-mono text-xs text-muted-foreground">
+              {contextNotes.trim().length} chars
+            </span>
+          )}
         </div>
-      </details>
+        <Textarea
+          value={contextNotes}
+          onChange={(e) => setContextNotes(e.target.value)}
+          placeholder="Paste an assignment, JD, thesis, or a sentence about what you're working on. The interviewer reads this to ask better questions. Never reaches the final draft."
+          rows={turns.length === 0 ? 6 : 3}
+          className="resize-y font-mono text-xs"
+        />
+      </div>
 
       {/* ------------------------------------------------------------------ */}
       {/* 3. Assessment callout                                               */}
@@ -347,9 +336,35 @@ export function InterviewPanel() {
       </div>
 
       {/* ------------------------------------------------------------------ */}
-      {/* 6 + 7. Input area + voice placeholder                               */}
+      {/* 6 + 7. Pre-interview Start button OR active input area              */}
       {/* ------------------------------------------------------------------ */}
-      <div className="px-5 py-4 border-t border-border shrink-0 flex flex-col gap-2">
+      {turns.length === 0 ? (
+        // Pre-interview: Start button instead of input. Prompts the user to
+        // fill Context first, then click Start. Mode selection alone does
+        // NOT auto-fire the first question — context-first workflow.
+        <div className="px-5 py-6 border-t border-border shrink-0 flex flex-col items-center gap-3">
+          <p className="font-body text-sm text-muted-foreground text-center max-w-xs">
+            {contextNotes.trim()
+              ? "Context looks good. Click below to start the interview."
+              : "Add context above (recommended), then start the interview. The interviewer reads your context to ask better questions."}
+          </p>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => void kickoff()}
+            disabled={loading || !apiKey}
+            className="font-mono uppercase tracking-wider"
+          >
+            {loading ? "Starting…" : "Start Interview →"}
+          </Button>
+          {!apiKey && (
+            <p className="font-mono text-xs text-destructive">
+              Add your API key in Settings to begin.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="px-5 py-4 border-t border-border shrink-0 flex flex-col gap-2">
         {/* Inline API key error */}
         {inlineError && (
           <p className="font-mono text-xs text-destructive">{inlineError}</p>
@@ -426,7 +441,8 @@ export function InterviewPanel() {
         <p className="font-mono text-[0.625rem] text-muted-foreground/60 text-right">
           Cmd+Enter to send
         </p>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

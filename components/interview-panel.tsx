@@ -95,6 +95,49 @@ export function InterviewPanel() {
   }, [voice.recording, inputValue]);
 
   // ---------------------------------------------------------------------------
+  // Voice input — Context textarea (pre-interview only)
+  // ---------------------------------------------------------------------------
+  // Separate instance from the answer-stage voice hook so a user who dictated
+  // their context and then mic'd an answer doesn't have their prior context
+  // leak into the answer buffer. Same base-snapshot + live-preview + commit-
+  // on-stop + autoscroll pattern.
+  const contextTextareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const baseContextRef = React.useRef("");
+  const voiceContext = useVoiceInput({
+    onError: (msg) => setError(msg),
+  });
+  const prevContextRecordingRef = React.useRef(false);
+  React.useEffect(() => {
+    if (voiceContext.recording && !prevContextRecordingRef.current) {
+      baseContextRef.current = contextNotes;
+    }
+    prevContextRecordingRef.current = voiceContext.recording;
+  });
+  React.useEffect(() => {
+    if (!voiceContext.recording) return;
+    const base = baseContextRef.current;
+    const separator = base.length > 0 && !base.endsWith(" ") ? " " : "";
+    const preview = voiceContext.finalTranscript + voiceContext.interimTranscript;
+    if (preview) {
+      setContextNotes(base + separator + preview);
+    }
+  }, [voiceContext.recording, voiceContext.finalTranscript, voiceContext.interimTranscript]);
+  React.useEffect(() => {
+    if (!voiceContext.recording && voiceContext.finalTranscript) {
+      const base = baseContextRef.current;
+      const separator = base.length > 0 && !base.endsWith(" ") ? " " : "";
+      setContextNotes(base + separator + voiceContext.finalTranscript);
+      baseContextRef.current = "";
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voiceContext.recording]);
+  React.useEffect(() => {
+    if (voiceContext.recording && contextTextareaRef.current) {
+      contextTextareaRef.current.scrollTop = contextTextareaRef.current.scrollHeight;
+    }
+  }, [voiceContext.recording, contextNotes]);
+
+  // ---------------------------------------------------------------------------
   // Derived values
   // ---------------------------------------------------------------------------
   // (userTurnCount / wordCount / coveragePct / isReady dropped 2026-04-15 —
@@ -379,9 +422,10 @@ export function InterviewPanel() {
           </label>
           <Textarea
             id="context-input"
+            ref={contextTextareaRef}
             value={contextNotes}
             onChange={(e) => setContextNotes(e.target.value)}
-            placeholder="Paste a job posting, assignment + rubric, reference doc, or any context to write from. This reaches only the interviewer — never the final draft."
+            placeholder="Paste a job posting, assignment + rubric, reference doc, or dictate: 'I'm writing an essay on WWII, attaching the rubric'. This reaches only the interviewer — never the final draft."
             rows={5}
             className="resize-none font-mono text-xs"
           />
@@ -409,6 +453,49 @@ export function InterviewPanel() {
               className="hidden"
               onChange={(e) => void handleFileSelect(e)}
             />
+
+            {/* Mic (dictate context) */}
+            {voiceContext.supported ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (voiceContext.recording) {
+                    voiceContext.stop();
+                    contextTextareaRef.current?.focus();
+                  } else {
+                    voiceContext.start();
+                  }
+                }}
+                aria-label={voiceContext.recording ? "Stop voice input" : "Start voice input"}
+                title={voiceContext.recording ? "Stop recording" : "Dictate context"}
+                className={cn(
+                  "flex items-center justify-center h-9 w-9 rounded-sm border border-border transition-colors",
+                  voiceContext.recording
+                    ? "text-accent border-accent animate-pulse"
+                    : "text-muted-foreground hover:text-foreground hover:border-foreground"
+                )}
+              >
+                {voiceContext.recording ? (
+                  <MicOff className="h-4 w-4" aria-hidden />
+                ) : (
+                  <Mic className="h-4 w-4" aria-hidden />
+                )}
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled
+                aria-label="Voice input unavailable"
+                title="Voice input not supported in this browser. Chrome or Edge recommended."
+                className={cn(
+                  "flex items-center justify-center h-9 w-9 rounded-sm border border-border",
+                  "text-muted-foreground cursor-not-allowed opacity-40"
+                )}
+              >
+                <Mic className="h-4 w-4" aria-hidden />
+              </button>
+            )}
+
             {uploading !== null && (
               <span className="font-mono text-xs text-muted-foreground">
                 Reading {uploading}…

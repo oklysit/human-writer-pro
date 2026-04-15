@@ -47,4 +47,30 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
+
+  /* Assembled-output prose container. ReactMarkdown renders paragraphs and
+     lists, but without spacing they run together — a 350-word email reads
+     as one block. Scoped to .prose-output so interview/feedback panels
+     stay unaffected. Read-only by design; we don't want an editor here. */
+  .prose-output p + p {
+    margin-top: 1em;
+  }
+
+  .prose-output ul,
+  .prose-output ol {
+    margin: 1em 0;
+    padding-left: 1.5em;
+  }
+
+  .prose-output ul {
+    list-style: disc;
+  }
+
+  .prose-output ol {
+    list-style: decimal;
+  }
+
+  .prose-output li + li {
+    margin-top: 0.25em;
+  }
 }

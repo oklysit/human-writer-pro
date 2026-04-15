@@ -3,9 +3,6 @@ import { getGoldenRule, STYLE_REFERENCES } from "../references";
 export const EMAIL_MODE = {
   name: "email",
   displayName: "Email",
-  seedQuestion: "Who's this going to, and what do you need from them?",
-  targetWords: 180,
-  rubricItems: ["subject / audience", "key ask or update", "context", "tone match", "close"],
   systemAddition: `
 # Mode: Email
 

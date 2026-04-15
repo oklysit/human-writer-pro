@@ -10,8 +10,10 @@ describe("prompt composition", () => {
   it("composes interview prompt with base + mode + step", () => {
     const prompt = composeInterviewPrompt("essay", 0);
     expect(prompt).toContain("voice"); // base includes voice mention
-    expect(prompt).toContain("Essay"); // mode mention
-    expect(prompt).toContain("What's the big idea"); // essay seed question on first turn
+    expect(prompt).toContain("Essay"); // mode displayName mention
+    // Turn-0 first-question marker (adaptive interviewer generates the
+    // first question based on context + mode rather than a hardcoded seed).
+    expect(prompt).toContain("First Question");
   });
 
   it("Socratic edit question prompt includes offending paragraph and complaint boundaries", () => {

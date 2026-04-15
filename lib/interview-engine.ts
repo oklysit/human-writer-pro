@@ -88,8 +88,6 @@ export async function askNextQuestion(input: EngineInput): Promise<EngineOutput>
     return {
       question: rawResponse,
       priorAssessment: null,
-      rubricItemsAddressedThisTurn: [],
-      coverageScore: 0,
       readyToAssemble: false,
       fallback: true,
     };

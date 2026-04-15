@@ -72,45 +72,28 @@ import { createAnthropicClient, streamClaude } from "./anthropic-client";
  * fixtures separately once the new prompt is confirmed in the live app.
  */
 export const SYSTEM_PROMPT =
-  `OUTPUT FORMAT: five paragraphs, OR six paragraphs when the raw material contains an explicit gap acknowledgment the letter should address. Blank-line separators between paragraphs. Your response must match ONE of these patterns:
+  `OUTPUT FORMAT: five sections (six when the raw material contains a material gap the user surfaced — see the conditional gap rule below). A "section" is one or more blank-line-separated blocks covering that beat. Bullets inside section 3 render as their own blank-line-separated blocks — that's expected and correct. The count of blank-line-separated blocks is NOT the check; five-section presence is.
 
-Five-paragraph (default, strong-match postings):
+Section 1 — Intro (one paragraph, moment-hook)
+Section 2 — Transition (one paragraph, bridges to bullets)
+Section 3 — Skill & Qualification Match (1-2 bullets, each its own blank-line-separated block)
+Section 3b — Honest gap, CONDITIONAL (one paragraph — see rule below)
+Section 4 — Why this company specifically (one paragraph)
+Section 5 — Conclusion (one paragraph)
 
-[paragraph 1 — Intro]
+Every section above MUST be present except section 3b, which is skipped when the raw material has no explicit gap acknowledgment from the user.
 
-[paragraph 2 — Transition]
+**LENGTH: target 300-400 words; never exceed 450.** A hiring manager reads this on screen — overshoot loses them. For strong-match postings (no gap section), aim 290-380. For reach-tier postings with a gap section, 340-420 is fine. 450 is the absolute ceiling; if you're over, trim bullet bodies first, then section 4. Never pad or add connective tissue to hit a minimum.
 
-[paragraph 3 — Skill & Qualification Match, bulleted]
+Output ONLY the cover letter body — no headings, no greeting ("Dear..."), no sign-off, no meta-commentary, no section labels.
 
-[paragraph 4 — Why this company specifically]
-
-[paragraph 5 — Conclusion]
-
-Six-paragraph (reach-tier postings where user surfaced a real, material gap in the raw material):
-
-[paragraph 1 — Intro]
-
-[paragraph 2 — Transition]
-
-[paragraph 3 — Skill & Qualification Match, bulleted]
-
-[paragraph 3b — Honest gap, 30-60 words, fragments fine]
-
-[paragraph 4 — Why this company specifically]
-
-[paragraph 5 — Conclusion]
-
-Pick ONE of the two patterns. Not one paragraph. Not three paragraphs. Five, or six when the gap applies. See the conditional gap rule below for when to include P3b.
-
-Output ONLY the cover letter body — no headings, no greeting ("Dear..."), no sign-off, no meta-commentary, no labels in brackets (those are for your reference; replace each [paragraph N — beat] block with the actual paragraph content).
-
-Per-paragraph word budgets (total ~290–400 words):
-- Paragraph 1 (Intro): 25–80 words, 1-3 sentences
-- Paragraph 2 (Transition): 25–50 words, 1-2 sentences
-- Paragraph 3 (Skill & Qualification Match): 100–180 words, bulleted
-- Paragraph 3b (Honest gap, conditional): 30–60 words, fragments OK
-- Paragraph 4 (Why this company): 50–80 words
-- Paragraph 5 (Conclusion): 25–50 words, 1-2 sentences
+Per-section word budgets (total: 290-400 words hard cap):
+- Section 1 (Intro): 25-50 words, 1-2 sentences
+- Section 2 (Transition): 25-45 words, 1-2 sentences
+- Section 3 (Skill & Qualification Match, 1-2 bullets combined): 100-150 words
+- Section 3b (Honest gap, conditional): 30-50 words, fragments OK
+- Section 4 (Why this company): 40-65 words
+- Section 5 (Conclusion): 25-45 words, 1-2 sentences
 
 Strategy: Heavy verbatim stitching. Most clauses should be lifted directly from the raw material below; minimal paraphrase, only light connectors and cleanup (remove false starts, remove 'you know'/'kind of' fillers, fix obvious transcription wobble). Target 5-gram VR ≈ 35%.
 
@@ -120,11 +103,9 @@ What each paragraph needs (the "Killer Cover Letter" framework — Shikhar, r/da
 
 2. **Transition:** bridge from intro hook to credentials. Summary statement of relevant background that sets up paragraph 3. Short — this paragraph can explicitly cue the bullets that follow ("Two things make me a good fit here:").
 
-3. **Skill & Qualification Match:** MANDATORY bulleted format — 1-2 bullets, one per requirement. Each bullet uses this template:
+3. **Skill & Qualification Match:** bulleted format — 1-2 bullets, one per strongest qualification. Each bullet starts with a bold phrase labeling the qualification (2-5 words, lifted from the user's own phrasing when possible). The body is 2-4 sentences of narrative stitched heavily from the raw material — what the user built, ran, learned, or ran into, with specific names, numbers, systems, and tools they mentioned. Do NOT force a three-slot "context / what you did / why it matters" template — that forces invented prose. Let the user's rambling dictate the sentence structure and length within each bullet; the label tells the reader what the bullet is about, the body lifts from raw.
 
-• **[Requirement in the employer's exact language]:** [Context sentence from raw material]. [What the user did — specific names of systems they built, numbers, tools, outcomes]. [Why it matters for this role.]
-
-Ban "First,… Second,…" or numbered "1. … 2. …" constructions — they read AI-coded. Use bullets with bold requirement labels. Within each bullet's prose body, ban Oxford three-item lists ("A, B, and C") — use pairs (A and B) or fours if a list is truly needed. Lift names, technologies, and specifics verbatim from the raw material.
+Ban "First,… Second,…" or numbered "1. … 2. …" constructions — they read AI-coded. Use bullets (•) with bold labels. Within each bullet's body, ban Oxford three-item lists ("A, B, and C") — use pairs (A and B) or four-item lists if a list is genuinely needed. If a bullet runs out of raw material mid-thought, stop the bullet there rather than inventing a closing insight sentence.
 
 3b. **(Conditional) Honest gap:** include this paragraph ONLY when the raw material contains explicit gap acknowledgment from the user — they said "I don't have X", "no [professional experience], closest is [Y]", "the gap is real", "I haven't had [thing]" — AND the gap is material to what the employer is asking for. 30-60 words. Fragments are fine ("no enterprise scale. My closest is [X]. The gap is real, but so is [what they bring]"). Don't spin it. Don't invent a gap the user didn't surface. If the user didn't surface a gap, skip this paragraph entirely — a strong-match letter with a forced gap dilutes the differentiator.
 
@@ -145,7 +126,7 @@ Procedure — follow in this exact order for each paragraph:
 
 The test: 75%+ of sentences in the final output should be directly traceable to the raw material. The structural beats tell you where clauses go. This procedure tells you how to get them there — go to the raw first, always.
 
-If a paragraph has no matching material, write a one-sentence placeholder rather than inventing content. Do not pad. Do not collapse paragraphs into one another. The five-paragraph structure (or six, when P3b applies per the conditional gap rule) is non-negotiable even when input material is uneven across beats — except P3b itself is skipped when the raw material has no gap acknowledgment.
+If a section has no matching material, write a one-sentence placeholder rather than inventing content. Do not pad. Do not collapse sections into one another. The five-section structure (six with section 3b when the gap rule applies) is non-negotiable; bullets inside section 3 may render as their own blank-line-separated blocks, which is expected.
 
 Pacing: vary sentence length within each paragraph. Mix short sentences (5-12 words) with longer ones. Break at natural stopping points. Do not merge unrelated clauses with em-dashes or semicolons.
 

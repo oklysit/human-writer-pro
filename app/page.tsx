@@ -9,6 +9,7 @@ import { PreviewPanel } from "@/components/preview-panel";
 import { useSessionStore, useCanAssemble } from "@/lib/store";
 import { assemble, assembleWithFeedback } from "@/lib/assemble";
 import { detectWritingMode, assemblyRegime } from "@/lib/detectWritingMode";
+import { combineContext } from "@/lib/combineContext";
 import type { AIIsmMatch } from "@/lib/ai-ism-detector";
 import { cn } from "@/lib/utils";
 
@@ -49,11 +50,16 @@ export default function HomePage() {
   // next to the Assemble button shows the user which regime will fire.
   // ---------------------------------------------------------------------------
   const contextNotes = useSessionStore((s) => s.contextNotes);
-  const detectedMode = React.useMemo(
-    () => detectWritingMode(contextNotes),
-    [contextNotes]
+  const attachedFiles = useSessionStore((s) => s.attachedFiles);
+  const combinedContext = React.useMemo(
+    () => combineContext(contextNotes, attachedFiles),
+    [contextNotes, attachedFiles]
   );
-  const detectedModeLabel = contextNotes.trim().length > 0
+  const detectedMode = React.useMemo(
+    () => detectWritingMode(combinedContext),
+    [combinedContext]
+  );
+  const detectedModeLabel = combinedContext.trim().length > 0
     ? `Mode: ${detectedMode === "cover-letter" ? "Cover Letter" : detectedMode === "free-form" ? "Free-form" : detectedMode[0].toUpperCase() + detectedMode.slice(1)}`
     : null;
 
@@ -75,7 +81,7 @@ export default function HomePage() {
 
     const state = useSessionStore.getState();
     const rawInterview = state.interview.rawTranscript;
-    const detectedMode = detectWritingMode(state.contextNotes);
+    const detectedMode = detectWritingMode(combineContext(state.contextNotes, state.attachedFiles));
     const regime = assemblyRegime(detectedMode);
     const targetWords = state.targetWords;
 
@@ -128,7 +134,7 @@ export default function HomePage() {
 
     const state = useSessionStore.getState();
     const rawInterview = state.interview.rawTranscript;
-    const detectedMode = detectWritingMode(state.contextNotes);
+    const detectedMode = detectWritingMode(combineContext(state.contextNotes, state.attachedFiles));
     const regime = assemblyRegime(detectedMode);
     const targetWords = state.targetWords;
 
@@ -191,7 +197,7 @@ export default function HomePage() {
     if (isUpload) {
       feedbackMode = "edit";
     } else {
-      const detectedMode = detectWritingMode(state.contextNotes);
+      const detectedMode = detectWritingMode(combineContext(state.contextNotes, state.attachedFiles));
       feedbackMode = assemblyRegime(detectedMode) === "cl" ? "cl" : "generic";
     }
 

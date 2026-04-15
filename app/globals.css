@@ -24,16 +24,11 @@
 }
 
 @layer components {
-  /* Editorial drop cap for prose output */
-  .prose-output > p:first-of-type::first-letter {
-    font-family: var(--font-display);
-    font-weight: 900;
-    font-size: 4em;
-    line-height: 0.85;
-    float: left;
-    margin: 0.1em 0.1em 0 0;
-    color: #171717;
-  }
+  /* Drop cap removed 2026-04-15 (post-mvp-backlog #5): cover-letter and
+     email genres don't conventionally have decorative typographic
+     treatments; the drop cap read as pretentious in user testing. If a
+     future mode (essay / blog / free-form) wants it back, gate it per
+     mode rather than applying universally. */
 
   /* Raw interview panel — monospace with gold left-rule */
   .panel-raw {

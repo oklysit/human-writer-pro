@@ -22,8 +22,6 @@ export function InterviewPanel() {
   const setContextNotes = useSessionStore((s) => s.setContextNotes);
   const addInterviewTurn = useSessionStore((s) => s.addInterviewTurn);
   const setLastAssessment = useSessionStore((s) => s.setLastAssessment);
-  const setCoverageScore = useSessionStore((s) => s.setCoverageScore);
-  const addRubricItemsAddressed = useSessionStore((s) => s.addRubricItemsAddressed);
   const setInterviewStatus = useSessionStore((s) => s.setInterviewStatus);
   const setError = useSessionStore((s) => s.setError);
 
@@ -113,11 +111,10 @@ export function InterviewPanel() {
         });
         if (cancelled) return;
         setLastAssessment(result.priorAssessment);
-        setCoverageScore(result.coverageScore);
-        addRubricItemsAddressed(result.rubricItemsAddressedThisTurn);
-        // Skip empty assistant turns — the model emits "" when it considers
-        // the interview ready, and rendering an empty turn shows as blank
-        // dead space in the transcript instead of a clear "ready" signal.
+        // Skip empty assistant turns — defensive in case the model emits ""
+        // (the new adaptive-interviewer prompt asks the model to put any
+        // readiness signal in the question text directly, so empty should
+        // be rare, but cheap to guard against).
         if (result.question.trim().length > 0) {
           addInterviewTurn({
             role: "assistant",
@@ -191,8 +188,6 @@ export function InterviewPanel() {
         contextNotes,
       });
       setLastAssessment(result.priorAssessment);
-      setCoverageScore(result.coverageScore);
-      addRubricItemsAddressed(result.rubricItemsAddressedThisTurn);
       // Skip empty assistant turns (see kickoff above for rationale).
       if (result.question.trim().length > 0) {
         addInterviewTurn({

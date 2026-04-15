@@ -1,6 +1,17 @@
 /**
  * coverage.ts — Pure helpers for the Socratic interview engine.
  *
+ * 2026-04-15: rubric/coverage helpers (computeCoverageScore, canAssemble,
+ * countUserWords) removed when the adaptive-interviewer rewrite landed.
+ * The model now judges its own readiness; the user controls when to
+ * assemble; no per-turn coverage_score is computed or scored.
+ *
+ * What stays:
+ *   - parseModelResponse: still parses the per-turn JSON the model emits
+ *     (now with a smaller shape — see TurnResult).
+ *   - stripInterviewQuestions: builds the assembly-stage user-message
+ *     string from interview turns, user-only.
+ *
  * No SDK imports. No browser APIs. Fully unit-testable.
  */
 
@@ -24,40 +35,8 @@ export type PriorAssessment = {
 export type TurnResult = {
   question: string;
   priorAssessment: PriorAssessment;
-  rubricItemsAddressedThisTurn: string[];
-  coverageScore: number;
   readyToAssemble: boolean;
 };
-
-// ---------------------------------------------------------------------------
-// computeCoverageScore
-// ---------------------------------------------------------------------------
-
-/**
- * Returns the fraction of rubric items that have been addressed.
- * Matching is case-insensitive and whitespace-trimmed.
- * Degenerate case: empty rubric → returns 0 (no division by zero).
- * Duplicates in `rubricItemsAddressed` are deduplicated before counting.
- */
-export function computeCoverageScore(
-  rubricItemsAddressed: string[],
-  rubric: string[]
-): number {
-  if (rubric.length === 0) return 0;
-
-  const normalise = (s: string) => s.trim().toLowerCase();
-  const rubricNorm = rubric.map(normalise);
-
-  // Deduplicate addressed items so "opener hook" twice still counts as 1
-  const addressedNorm = new Set(rubricItemsAddressed.map(normalise));
-
-  let matched = 0;
-  for (const item of rubricNorm) {
-    if (addressedNorm.has(item)) matched++;
-  }
-
-  return matched / rubric.length;
-}
 
 // ---------------------------------------------------------------------------
 // parseModelResponse
@@ -71,8 +50,6 @@ export function computeCoverageScore(
  * - JSON wrapped in ```json ... ``` (or plain ``` ... ```) code fences
  *
  * Returns null on any parse error (caller falls back to raw text as question).
- *
- * Maps snake_case model fields → camelCase TurnResult.
  */
 export function parseModelResponse(raw: string): TurnResult | null {
   if (!raw || raw.trim() === "") return null;
@@ -110,58 +87,11 @@ export function parseModelResponse(raw: string): TurnResult | null {
     };
   }
 
-  // Clamp coverage_score to [0, 1]; guard against non-numeric values
-  const rawScore = parsed["coverage_score"];
-  const coverageScore =
-    typeof rawScore === "number" ? Math.max(0, Math.min(1, rawScore)) : 0;
-
   return {
     question: typeof parsed["question"] === "string" ? parsed["question"] : "",
     priorAssessment,
-    rubricItemsAddressedThisTurn: Array.isArray(parsed["rubric_items_addressed_this_turn"])
-      ? (parsed["rubric_items_addressed_this_turn"] as unknown[]).filter(
-          (x): x is string => typeof x === "string"
-        )
-      : [],
-    coverageScore,
     readyToAssemble: Boolean(parsed["ready_to_assemble"]),
   };
-}
-
-// ---------------------------------------------------------------------------
-// canAssemble
-// ---------------------------------------------------------------------------
-
-/**
- * Gate used by Task 17a downstream.
- * Returns true iff coverage >= 0.6 AND user word count >= 150.
- * Boundary is inclusive on both ends.
- */
-export function canAssemble(coverageScore: number, wordCount: number): boolean {
-  return coverageScore >= 0.6 && wordCount >= 150;
-}
-
-// ---------------------------------------------------------------------------
-// countUserWords
-// ---------------------------------------------------------------------------
-
-/**
- * Sums word counts from role:"user" turns only.
- * Uses the same tokenizer strategy as verbatim-ratio:
- * lowercase, strip punctuation, split on whitespace, filter empty tokens.
- */
-export function countUserWords(turns: InterviewTurn[]): number {
-  let total = 0;
-  for (const turn of turns) {
-    if (turn.role !== "user") continue;
-    const tokens = turn.content
-      .toLowerCase()
-      .replace(/[^\w\s]/g, "") // strip punctuation
-      .split(/\s+/)
-      .filter((t) => t.length > 0);
-    total += tokens.length;
-  }
-  return total;
 }
 
 // ---------------------------------------------------------------------------

@@ -8,10 +8,15 @@ import type { Mode } from "../../store";
 export type ModeConfig = {
   name: string;
   displayName: string;
-  seedQuestion: string;
-  targetWords: number;
+  /**
+   * Mode-specific guidance for the interviewer (what a good {displayName}
+   * needs in terms of raw material). Read only by the interview stage —
+   * never enters the assembly call. Per 2026-04-15 adaptive-interviewer
+   * refactor, rubricItems / seedQuestion / targetWords are dropped;
+   * the model reasons about question count + structure from this guidance
+   * + user-provided context.
+   */
   systemAddition: string;
-  rubricItems: string[];
 };
 
 export const MODES: Record<Mode, ModeConfig> = {

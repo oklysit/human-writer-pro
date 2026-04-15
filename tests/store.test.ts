@@ -54,35 +54,13 @@ describe("useSessionStore", () => {
     expect(state.output).toBe("");
   });
 
-  // New Socratic engine state
+  // New Socratic engine state (post 2026-04-15 adaptive-interviewer rewrite:
+  // coverageScore + rubricItemsAddressed dropped; the model judges its own
+  // readiness in conversational form, no per-turn coverage tracking).
 
-  it("has zero coverageScore, empty rubricItemsAddressed, null lastAssessment by default", () => {
+  it("has null lastAssessment by default", () => {
     const state = useSessionStore.getState();
-    expect(state.interview.coverageScore).toBe(0);
-    expect(state.interview.rubricItemsAddressed).toEqual([]);
     expect(state.interview.lastAssessment).toBeNull();
-  });
-
-  it("setCoverageScore updates coverageScore", () => {
-    useSessionStore.getState().setCoverageScore(0.6);
-    expect(useSessionStore.getState().interview.coverageScore).toBe(0.6);
-  });
-
-  it("setRubricItemsAddressed replaces the full list", () => {
-    useSessionStore.getState().setRubricItemsAddressed(["opener hook", "credentials"]);
-    expect(useSessionStore.getState().interview.rubricItemsAddressed).toEqual(["opener hook", "credentials"]);
-  });
-
-  it("addRubricItemsAddressed appends new items, deduplicates", () => {
-    useSessionStore.getState().setRubricItemsAddressed(["opener hook"]);
-    useSessionStore.getState().addRubricItemsAddressed(["opener hook", "credentials"]); // opener hook is a dup
-    expect(useSessionStore.getState().interview.rubricItemsAddressed).toEqual(["opener hook", "credentials"]);
-  });
-
-  it("addRubricItemsAddressed is case-insensitive when deduplicating", () => {
-    useSessionStore.getState().setRubricItemsAddressed(["Opener Hook"]);
-    useSessionStore.getState().addRubricItemsAddressed(["opener hook"]); // same item, different case
-    expect(useSessionStore.getState().interview.rubricItemsAddressed).toEqual(["Opener Hook"]);
   });
 
   it("setLastAssessment stores the assessment", () => {
@@ -98,26 +76,10 @@ describe("useSessionStore", () => {
     expect(useSessionStore.getState().interview.lastAssessment).toBeNull();
   });
 
-  it("setMode resets coverageScore, rubricItemsAddressed, lastAssessment", () => {
-    useSessionStore.getState().setCoverageScore(0.8);
-    useSessionStore.getState().setRubricItemsAddressed(["opener hook"]);
+  it("setMode resets lastAssessment", () => {
     useSessionStore.getState().setLastAssessment({ level: "sufficient", reasoning: "OK." });
     useSessionStore.getState().setMode("blog");
     const state = useSessionStore.getState();
-    expect(state.interview.coverageScore).toBe(0);
-    expect(state.interview.rubricItemsAddressed).toEqual([]);
     expect(state.interview.lastAssessment).toBeNull();
-  });
-
-  // --- setCoverageScore clamping (Fix #1 defense-in-depth) ---
-
-  it("setCoverageScore(1.5) clamps to 1", () => {
-    useSessionStore.getState().setCoverageScore(1.5);
-    expect(useSessionStore.getState().interview.coverageScore).toBe(1);
-  });
-
-  it("setCoverageScore(-0.3) clamps to 0", () => {
-    useSessionStore.getState().setCoverageScore(-0.3);
-    expect(useSessionStore.getState().interview.coverageScore).toBe(0);
   });
 });

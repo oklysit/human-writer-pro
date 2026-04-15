@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { VRResult } from "./verbatim-ratio";
-import { canAssemble, countUserWords, stripInterviewQuestions, type AssessmentLevel } from "./coverage";
+import { stripInterviewQuestions, type AssessmentLevel } from "./coverage";
 
 export type Mode = "essay" | "email" | "blog" | "cover-letter" | "free-form";
 
@@ -37,8 +37,6 @@ export type AppState = {
     turns: InterviewTurn[];
     rawTranscript: string;
     status: "idle" | "asking" | "ready-to-assemble";
-    coverageScore: number;
-    rubricItemsAddressed: string[];
     lastAssessment: LastAssessment;
   };
   output: string;
@@ -54,9 +52,6 @@ type AppActions = {
   setContextNotes: (notes: string) => void;
   addInterviewTurn: (turn: InterviewTurn) => void;
   setInterviewStatus: (status: AppState["interview"]["status"]) => void;
-  setCoverageScore: (score: number) => void;
-  setRubricItemsAddressed: (items: string[]) => void;
-  addRubricItemsAddressed: (items: string[]) => void;
   setLastAssessment: (assessment: LastAssessment) => void;
   setOutput: (output: string) => void;
   setVRScore: (score: VRResult | null) => void;
@@ -74,8 +69,6 @@ const initialState: AppState = {
     turns: [],
     rawTranscript: "",
     status: "idle",
-    coverageScore: 0,
-    rubricItemsAddressed: [],
     lastAssessment: null,
   },
   output: "",
@@ -122,30 +115,6 @@ export const useSessionStore = create<AppState & AppActions>()(
 
       setInterviewStatus: (status) =>
         set((state) => ({ interview: { ...state.interview, status } })),
-
-      setCoverageScore: (score) =>
-        set((state) => ({
-          interview: {
-            ...state.interview,
-            coverageScore: Math.max(0, Math.min(1, score)),
-          },
-        })),
-
-      setRubricItemsAddressed: (rubricItemsAddressed) =>
-        set((state) => ({ interview: { ...state.interview, rubricItemsAddressed } })),
-
-      addRubricItemsAddressed: (items) =>
-        set((state) => {
-          const existing = new Set(state.interview.rubricItemsAddressed.map((s) => s.toLowerCase().trim()));
-          const toAdd = items.filter((item) => !existing.has(item.toLowerCase().trim()));
-          if (toAdd.length === 0) return state;
-          return {
-            interview: {
-              ...state.interview,
-              rubricItemsAddressed: [...state.interview.rubricItemsAddressed, ...toAdd],
-            },
-          };
-        }),
 
       setLastAssessment: (lastAssessment) =>
         set((state) => ({ interview: { ...state.interview, lastAssessment } })),

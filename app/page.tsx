@@ -8,6 +8,7 @@ import { InterviewPanel } from "@/components/interview-panel";
 import { PreviewPanel } from "@/components/preview-panel";
 import { useSessionStore, useCanAssemble } from "@/lib/store";
 import { assemble, assembleWithFeedback } from "@/lib/assemble";
+import { detectWritingMode, assemblyRegime } from "@/lib/detectWritingMode";
 import type { AIIsmMatch } from "@/lib/ai-ism-detector";
 import { cn } from "@/lib/utils";
 
@@ -46,7 +47,10 @@ export default function HomePage() {
   function handleAssemble() {
     if (!apiKey || !mode) return;
 
-    const rawInterview = useSessionStore.getState().interview.rawTranscript;
+    const state = useSessionStore.getState();
+    const rawInterview = state.interview.rawTranscript;
+    const detectedMode = detectWritingMode(state.contextNotes);
+    const regime = assemblyRegime(detectedMode);
 
     // Cancel any in-flight stream
     cancelRef.current?.();
@@ -58,6 +62,7 @@ export default function HomePage() {
     const { cancel } = assemble({
       apiKey,
       rawInterview,
+      regime,
       onToken: (delta) => {
         const current = useSessionStore.getState().output;
         useSessionStore.getState().setOutput(current + delta);
@@ -93,7 +98,10 @@ export default function HomePage() {
   function handleRegenerate(_matches: AIIsmMatch[]): void {
     if (!apiKey || !mode) return;
 
-    const rawInterview = useSessionStore.getState().interview.rawTranscript;
+    const state = useSessionStore.getState();
+    const rawInterview = state.interview.rawTranscript;
+    const detectedMode = detectWritingMode(state.contextNotes);
+    const regime = assemblyRegime(detectedMode);
 
     cancelRef.current?.();
 
@@ -104,6 +112,7 @@ export default function HomePage() {
     const { cancel } = assemble({
       apiKey,
       rawInterview,
+      regime,
       onToken: (delta) => {
         const current = useSessionStore.getState().output;
         useSessionStore.getState().setOutput(current + delta);
@@ -143,7 +152,18 @@ export default function HomePage() {
       isUpload && state.uploadedDraftContent
         ? state.uploadedDraftContent
         : state.interview.rawTranscript;
-    const feedbackMode = isUpload ? ("edit" as const) : ("cl" as const);
+
+    // Route regen flavor:
+    //   upload → "edit" (preserve uploaded draft)
+    //   interview + CL context → "cl" (preserve 5-section framework)
+    //   interview + non-CL context → "generic" (preserve genre inference)
+    let feedbackMode: "cl" | "generic" | "edit";
+    if (isUpload) {
+      feedbackMode = "edit";
+    } else {
+      const detectedMode = detectWritingMode(state.contextNotes);
+      feedbackMode = assemblyRegime(detectedMode) === "cl" ? "cl" : "generic";
+    }
 
     cancelRef.current?.();
 

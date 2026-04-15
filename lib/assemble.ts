@@ -132,12 +132,80 @@ Pacing: vary sentence length within each paragraph. Mix short sentences (5-12 wo
 
 Apply heavy verbatim stitching within each paragraph — the paragraph structure tells you WHERE to place clauses, the stitching strategy tells you HOW to lift them. If a paragraph would require a transitional or framing sentence not present in the raw material, omit it rather than invent it.`;
 
+/**
+ * Generic-write assembly prompt — used when detectWritingMode() returns
+ * anything other than "cover-letter" (email / essay / blog / free-form).
+ *
+ * Philosophy: same heavy verbatim stitching + filler preservation +
+ * AI-ism avoidance as the CL framework, but NO 5-section template, NO
+ * mandatory bullets, NO banned-phrase close. The model infers genre,
+ * structure, and length from the context the interviewer was working
+ * with. An email reads like a conventional email; an essay follows
+ * academic structure with the rubric's word count; a blog post is
+ * conversational and appropriately paced.
+ *
+ * Exported separately so verification scripts can pin the live prompts.
+ */
+export const GENERIC_WRITE_SYSTEM_PROMPT =
+  `You are assembling a polished written piece from the user's raw interview transcript. The user answered an interviewer's questions about what they're writing; your job is to stitch a draft that reads polished AND preserves the user's voice by anchoring on their verbatim phrasing.
+
+Infer the appropriate genre, structure, and length from context:
+- An email reads like a conventional email (100-300 words for most business contexts; up to 500 for a detailed pitch or response). Skip "Dear [Name]" stock greetings unless the context explicitly calls for one.
+- An essay follows the structure appropriate to the assignment. If a word count appears in the context or rubric ("300-word essay", "500-word response", "under 750 words"), honor it. Otherwise use genre conventions.
+- A blog post is conversational, with a clear lede, concrete examples, and an ending that earns its conclusion.
+- Free-form or unspecified genres: trust the interview material to reveal what the user is making, and match its register.
+- If the user explicitly names a target word count in the interview ("make this 400 words", "keep it under 250"), honor that above genre conventions.
+
+Verbatim-anchoring rules (the load-bearing ones):
+
+1. **Lift in sequences, not single words.** When using the user's phrasing, lift 3+ consecutive words at a time. Single-word borrowings don't count as verbatim stitching — they read as paraphrase. Lift a clause, a sentence fragment, or a full sentence directly.
+
+2. **Target ~25% verbatim.** Roughly 1 in 4 words in your output should trace to an exact 3+-word sequence in the raw interview. That's substantial anchoring without being clunky. Less than 15% reads as pure paraphrase (generic LLM prose); more than 40% reads as awkward dictation. Aim for ~25%.
+
+3. **Use connective prose for polish, not padding.** Around the verbatim anchors, write clean connective sentences in neutral register. These are where the writing breathes — don't stuff them with filler.
+
+4. **Remove obvious transcription filler.** Strip "you know", "kinda", "sort of", "I mean", "like" (as a filler word), repeated false starts, and conversational stalls. The output should read polished, NOT like a raw dictation transcript. The verbatim anchors carry the user's voice — they don't need filler to do it.
+
+5. **Keep deliberate hedges and distinctive phrasings.** "If I'm being honest", "the way I think about it", "what stuck with me", "this is where it gets interesting" — these are voice, not filler. Keep them if the user used them.
+
+Structural rules (genre-agnostic):
+
+6. **No cover-letter framework.** Do NOT impose a 5-section structure. Do NOT add mandatory skill-match bullets. Do NOT force a "why this company" beat or a specific closing template. Let the genre determine the shape.
+
+7. **Output the draft only.** No preamble, no meta-commentary, no section labels, no heading unless the genre conventionally uses them (e.g., an email with a subject line, an essay with a title the user requested).
+
+AI-tell avoidance (pattern-based):
+
+8. Do NOT use "Not just X, but also Y" (negative parallelism).
+9. Do NOT use exactly-three parallel items (rule-of-three).
+10. Do NOT use "serves as" / "stands as" copula dodges — just use "is".
+11. Do NOT use trailing "-ing" significance phrases ("highlighting the importance of…", "demonstrating a commitment to…").
+12. Do NOT use elegant variation — repeat proper nouns, don't cycle synonyms.
+
+Procedure — follow for each paragraph / section / unit:
+
+1. Read the raw material below. Identify sentences or clauses that belong in this unit.
+2. Lift them as 3+ word sequences into the draft. Preserve phrasing even if slightly rough.
+3. Write connective sentences between the verbatim anchors in clean, neutral register. Keep these short — they're glue, not content.
+4. Filter out transcription filler as you go. The verbatim anchors stay; the "you know"s get dropped.
+5. After the unit is drafted, verify: ~25% of your word count should trace to an exact 3+-word sequence in the raw. If you're at 10%, add more verbatim lifts. If you're at 50%, the connective tissue got thin.
+
+Pacing: vary sentence length. Mix short with longer. Break at natural stopping points. Do not merge unrelated clauses with em-dashes or semicolons.`;
+
 export type AssembleOptions = {
   apiKey: string;
   rawInterview: string;
   onToken: (delta: string) => void;
   onComplete: (fullText: string) => void;
   onError: (message: string) => void;
+  /**
+   * Assembly prompt regime. "cl" uses the 5-section killer-CL framework
+   * (SYSTEM_PROMPT); "generic" uses GENERIC_WRITE_SYSTEM_PROMPT (no CL
+   * structure, model infers genre/length/structure from context).
+   * Routed by lib/detectWritingMode.assemblyRegime(mode).
+   * Defaults to "cl" for backward compat with the initial MVP.
+   */
+  regime?: "cl" | "generic";
 };
 
 /**
@@ -151,18 +219,23 @@ export type AssembleOptions = {
  * the fact. Streaming tokens already in-flight will be swallowed.
  */
 export function assemble(options: AssembleOptions): { cancel: () => void } {
-  const { apiKey, rawInterview, onToken, onComplete, onError } = options;
+  const { apiKey, rawInterview, onToken, onComplete, onError, regime = "cl" } = options;
 
   let cancelled = false;
 
   const client = createAnthropicClient(apiKey);
 
+  const systemPrompt = regime === "generic" ? GENERIC_WRITE_SYSTEM_PROMPT : SYSTEM_PROMPT;
+  // Generic mode may need to accommodate longer outputs (essays, detailed
+  // emails, blog posts). CL framework caps around 400-450 words.
+  const maxTokens = regime === "generic" ? 2048 : 1024;
+
   streamClaude(
     client,
     {
-      systemPrompt: SYSTEM_PROMPT,
+      systemPrompt,
       messages: [{ role: "user", content: rawInterview.trim() }],
-      maxTokens: 1024,
+      maxTokens,
       model: "claude-sonnet-4-6",
     },
     {
@@ -190,15 +263,18 @@ export function assemble(options: AssembleOptions): { cancel: () => void } {
 // ---------------------------------------------------------------------------
 
 /**
- * "edit" mode is for revising an existing user-provided draft (e.g., they
- * uploaded a README they want polished). The CL framework prompt would
- * mangle a long-form document into 5 sections + bullets — wrong for that
- * use case. Edit-mode uses a generic preserve-and-refine prompt instead.
- *
- * "cl" mode (default) keeps the killer-CL framework + verbatim-stitching
- * prompt for cover-letter regeneration after the interview.
+ * Three regen flavors:
+ *   "cl"      — CL framework (SYSTEM_PROMPT): interview-sourced output
+ *               that follows the 5-section killer-CL format.
+ *   "generic" — Generic write (GENERIC_WRITE_SYSTEM_PROMPT): interview-
+ *               sourced output in non-CL genres (email, essay, blog,
+ *               free-form). No 5-section imposition; genre-appropriate
+ *               length and structure inferred from context.
+ *   "edit"    — Generic edit (GENERIC_EDIT_SYSTEM_PROMPT): upload-sourced
+ *               output where the user wants to refine an existing draft
+ *               without imposing any framework.
  */
-export type AssembleFeedbackMode = "cl" | "edit";
+export type AssembleFeedbackMode = "cl" | "generic" | "edit";
 
 export type AssembleWithFeedbackOptions = AssembleOptions & {
   /** The previous draft the user is asking to revise. */
@@ -262,7 +338,10 @@ export function assembleWithFeedback(options: AssembleWithFeedbackOptions): { ca
   let cancelled = false;
   const client = createAnthropicClient(apiKey);
 
-  const systemPrompt = mode === "edit" ? GENERIC_EDIT_SYSTEM_PROMPT : SYSTEM_PROMPT;
+  let systemPrompt: string;
+  if (mode === "edit") systemPrompt = GENERIC_EDIT_SYSTEM_PROMPT;
+  else if (mode === "generic") systemPrompt = GENERIC_WRITE_SYSTEM_PROMPT;
+  else systemPrompt = SYSTEM_PROMPT; // "cl"
 
   const revisionInstruction =
     mode === "edit"
@@ -272,6 +351,13 @@ User feedback:
 ${feedback.trim()}
 
 Output the revised draft only — no preamble, no commentary.`
+      : mode === "generic"
+      ? `The user has reviewed the draft above and given the following feedback. Regenerate the draft incorporating their feedback. Keep the heavy verbatim-stitching approach — lift the user's exact phrasing from the raw material (including any new material in the feedback itself). Preserve the genre, structure, and length conventions already established in the draft unless feedback directs otherwise.
+
+User feedback:
+${feedback.trim()}
+
+Output the revised draft only — no preamble, no commentary on what changed.`
       : `The user has reviewed the draft above and given the following feedback. Regenerate the draft incorporating their feedback. Keep the verbatim-stitching approach — lift the user's exact phrasing from the source material, including the feedback itself if it adds new material. Preserve the section structure and word budgets from the original system prompt.
 
 User feedback:
@@ -279,11 +365,11 @@ ${feedback.trim()}
 
 Output the revised draft only — no preamble, no commentary on what changed.`;
 
-  // For edit-mode uploads, the "raw material" and "previous output" are
-  // both the upload itself on the first regen — that's expected and lets
-  // the model treat the upload as both source-to-stitch-from and prior-
-  // draft-to-incorporate-feedback-into.
-  const maxTokens = mode === "edit" ? 4096 : 1024;
+  // Token budget per regime:
+  //   edit   — 4096, uploads can be long
+  //   generic — 2048, essays / detailed emails / blog posts
+  //   cl     — 1024, CL framework caps ~450 words
+  const maxTokens = mode === "edit" ? 4096 : mode === "generic" ? 2048 : 1024;
 
   streamClaude(
     client,

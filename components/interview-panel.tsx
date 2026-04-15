@@ -416,9 +416,15 @@ export function InterviewPanel() {
           );
         })}
 
-        {/* Loading indicator — thin editorial progress pulse */}
+        {/* Loading indicator — chat-style "Thinking…" with pulsing bar.
+            Previously just a thin animated bar, too subtle during longer
+            question-generation calls; user couldn't tell if stuck or
+            working (UAT 2026-04-15). Now pairs explicit text with the bar. */}
         {loading && (
-          <div className="pl-3 py-1 border-l-2 border-warning/40">
+          <div className="pl-3 py-1 border-l-2 border-warning/40 flex flex-col gap-1.5">
+            <p className="font-body text-sm text-muted-foreground italic animate-pulse">
+              Thinking&hellip;
+            </p>
             <div className="h-1 w-24 bg-muted rounded-sm overflow-hidden">
               <div className="h-full bg-warning/50 rounded-sm animate-pulse w-full" />
             </div>

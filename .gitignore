@@ -43,3 +43,7 @@ next-env.d.ts
 # scratch/ holds per-run debug script outputs (verify-strip, verify-all-fixtures, etc.)
 # Useful locally, too churny to track in git.
 /scratch/
+
+# pdfjs worker is copied from node_modules at install time (see postinstall
+# script in package.json). 1.2MB binary, not worth committing.
+/public/pdf.worker.min.mjs

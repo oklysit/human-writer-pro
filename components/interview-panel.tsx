@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Mic, MicOff } from "lucide-react";
+import { Mic, MicOff, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useSessionStore } from "@/lib/store";
 import { askNextQuestion } from "@/lib/interview-engine";
 import { cn } from "@/lib/utils";
 import { useVoiceInput } from "@/lib/useVoiceInput";
+import { extractText, isSupported } from "@/lib/fileImport";
 
 export function InterviewPanel() {
   // ---------------------------------------------------------------------------
@@ -31,6 +32,9 @@ export function InterviewPanel() {
   const [inputValue, setInputValue] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [inlineError, setInlineError] = React.useState<string | null>(null);
+  const [uploading, setUploading] = React.useState<string | null>(null);
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Ref for scroll-to-bottom on new turns
   const historyEndRef = React.useRef<HTMLDivElement>(null);
@@ -102,6 +106,7 @@ export function InterviewPanel() {
   // tells it.
   async function kickoff() {
     if (!mode || !apiKey || turns.length > 0 || loading) return;
+    if (!contextNotes.trim()) return;
     setLoading(true);
     try {
       const result = await askNextQuestion({
@@ -205,24 +210,51 @@ export function InterviewPanel() {
   }
 
   // ---------------------------------------------------------------------------
+  // File upload
+  // ---------------------------------------------------------------------------
+  // Uploaded files are read in the browser, text-extracted (.md/.txt via
+  // FileReader, .pdf via pdfjs-dist, .docx via mammoth), and appended to
+  // `contextNotes`. The appended text reaches ONLY the interview stage —
+  // never the assembly call (see lib/store.ts contextNotes comment).
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadError(null);
+
+    for (const file of Array.from(files)) {
+      if (!isSupported(file.name)) {
+        setUploadError(`Unsupported: ${file.name}. Use .md / .txt / .pdf / .docx.`);
+        continue;
+      }
+      setUploading(file.name);
+      try {
+        const text = await extractText(file);
+        if (!text) {
+          setUploadError(`No text extracted from ${file.name}.`);
+          continue;
+        }
+        const current = useSessionStore.getState().contextNotes;
+        const separator = current.trim().length > 0 ? "\n\n" : "";
+        setContextNotes(
+          `${current}${separator}--- From: ${file.name} ---\n\n${text}`
+        );
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : `Failed to read ${file.name}`;
+        setUploadError(msg);
+      } finally {
+        setUploading(null);
+      }
+    }
+
+    // Clear the input so selecting the same file again re-fires change.
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
-
-  // No mode selected
-  if (!mode) {
-    return (
-      <div className="flex flex-col h-full bg-card border-r border-border">
-        <div className="flex items-center gap-4 px-5 py-3 border-b border-border">
-          <span className="label-caps text-foreground">Interview</span>
-        </div>
-        <div className="flex flex-1 items-center justify-center px-5">
-          <p className="font-mono text-sm text-muted-foreground">
-            Pick a writing mode to begin.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // No mode-gate render: mode defaults to "cover-letter" in the store
+  // (2026-04-15 Writing-Mode-dropdown removal). Context gates the flow.
 
   return (
     <div className="flex flex-col h-full bg-card border-r border-border">
@@ -242,17 +274,52 @@ export function InterviewPanel() {
       {/* ------------------------------------------------------------------ */}
       <div className="px-5 py-3 border-b border-border shrink-0">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="label-caps text-foreground">Context</span>
-          {contextNotes.trim() && (
-            <span className="font-mono text-xs text-muted-foreground">
-              {contextNotes.trim().length} chars
+          <div className="flex items-center gap-2">
+            <span className="label-caps text-foreground">Context</span>
+            <span className="font-mono text-[0.625rem] text-muted-foreground/70 uppercase tracking-wider">
+              (required)
             </span>
-          )}
+          </div>
+          <div className="flex items-center gap-3">
+            {contextNotes.trim() && (
+              <span className="font-mono text-xs text-muted-foreground">
+                {contextNotes.trim().length} chars
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading !== null}
+              className={cn(
+                "flex items-center gap-1 font-mono text-[0.625rem] uppercase tracking-wider",
+                "text-muted-foreground hover:text-foreground transition-colors",
+                uploading !== null && "opacity-50 cursor-not-allowed"
+              )}
+              title="Upload .md, .txt, .pdf, or .docx. Text is extracted in the browser and appended below."
+              aria-label="Upload context file"
+            >
+              <Paperclip className="h-3 w-3" aria-hidden />
+              {uploading !== null ? `Reading ${uploading}…` : "Upload"}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".md,.txt,.pdf,.docx"
+              multiple
+              className="hidden"
+              onChange={(e) => void handleFileSelect(e)}
+            />
+          </div>
         </div>
+        {uploadError && (
+          <p className="font-mono text-xs text-destructive mb-1.5">
+            {uploadError}
+          </p>
+        )}
         <Textarea
           value={contextNotes}
           onChange={(e) => setContextNotes(e.target.value)}
-          placeholder="Paste an assignment, JD, thesis, or a sentence about what you're working on. The interviewer reads this to ask better questions. Never reaches the final draft."
+          placeholder="What are you writing, for whom, and what rules apply? Paste an assignment + rubric, a job posting, a reference doc, or anything else the interviewer should read before asking questions. You can also upload files (.md / .txt / .pdf / .docx). This context reaches ONLY the interviewer — never the final draft."
           rows={turns.length === 0 ? 6 : 3}
           className="resize-y font-mono text-xs"
         />
@@ -346,13 +413,13 @@ export function InterviewPanel() {
           <p className="font-body text-sm text-muted-foreground text-center max-w-xs">
             {contextNotes.trim()
               ? "Context looks good. Click below to start the interview."
-              : "Add context above (recommended), then start the interview. The interviewer reads your context to ask better questions."}
+              : "Add context above (required). Paste text, or upload .md / .txt / .pdf / .docx. The interviewer reads this to ask the right questions."}
           </p>
           <Button
             variant="default"
             size="sm"
             onClick={() => void kickoff()}
-            disabled={loading || !apiKey}
+            disabled={loading || !apiKey || !contextNotes.trim()}
             className="font-mono uppercase tracking-wider"
           >
             {loading ? "Starting…" : "Start Interview →"}

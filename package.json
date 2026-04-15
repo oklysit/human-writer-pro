@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "eval:cl": "tsx scripts/eval/run-cl-regression.ts",
     "eval:cl-diff": "tsx scripts/eval/compare-baselines.ts",
-    "mojo:report": "tsx scripts/mojo-report.ts"
+    "mojo:report": "tsx scripts/mojo-report.ts",
+    "postinstall": "mkdir -p public && cp -f node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/pdf.worker.min.mjs"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.107",
@@ -24,7 +25,9 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.8.0",
+    "mammoth": "^1.12.0",
     "next": "14.2.35",
+    "pdfjs-dist": "^5.6.205",
     "react": "^18",
     "react-dom": "^18",
     "react-markdown": "^10.1.0",

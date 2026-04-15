@@ -50,17 +50,23 @@ import { createAnthropicClient, streamClaude } from "./anthropic-client";
  * fixtures separately once the new prompt is confirmed in the live app.
  */
 export const SYSTEM_PROMPT =
-  `Write a single paragraph of approximately 350 words (strict range: 290–400) that answers the interview question below. Output ONLY the paragraph — no headings, no quotes, no meta-commentary.
+  `Write a cover letter of approximately 350 words (strict range: 290–400). The output should have visible paragraph breaks (blank lines) between the five structural beats described below. Output ONLY the cover letter body — no headings, no greeting ("Dear..."), no sign-off, no meta-commentary.
 
-Strategy: Heavy verbatim stitching. Most clauses should be lifted directly; minimal paraphrase, only light connectors and cleanup (remove false starts, remove 'you know'/'kind of' fillers where they break the paragraph, fix obvious transcription wobble). Target 5-gram VR ≈ 35%.
+Strategy: Heavy verbatim stitching. Most clauses should be lifted directly; minimal paraphrase, only light connectors and cleanup (remove false starts, remove 'you know'/'kind of' fillers where they break the flow, fix obvious transcription wobble). Target 5-gram VR ≈ 35%.
 
-Structure the output as four beats, in this order:
-1. Opener — state who you are directly and tie to the role. One or two sentences.
-2. Credentials — relevant experience with specific projects, skills, or outcomes.
-3. Why this company or role specifically — the personal reason that drew you here.
-4. Close — what you'd contribute and a concrete next step.
+The five structural beats (the "Killer Cover Letter" framework — Shikhar, r/datascience), in order, each its own paragraph:
 
-Pull verbatim clauses from the raw material to fill each beat. If a beat has no matching material in the raw text, write a minimal placeholder sentence rather than inventing content. Do not pad.
+1. **Intro (1-2 sentences):** who the user is, what they want, what they believe in — tied to something specific about the company. Lead with what's distinctive for THIS role (an obsessive focus, an unusual perspective, a stake-in-the-ground opinion). Do NOT lead with generic identity ("I'm a student at WGU").
+
+2. **Transition (1-2 sentences):** a summary statement of the user's most relevant background that sets up the credential beats. Bridge from the intro's hook to the credentials that follow.
+
+3. **Skill & Qualification Match (1 paragraph, 100-150 words):** the strongest 1-2 qualifications from the user's experience, tied directly to the role's requirements. Each shown via a concrete project, story, or outcome — not claims. Lift from the raw material.
+
+4. **Why this company specifically (1 paragraph, 50-80 words):** the personal, researched reason — a specific company decision, a product the user has used, a piece of news, a values-fit grounded in something concrete from the raw material. Avoid generic "I'm impressed by your mission" lines.
+
+5. **Conclusion (1-2 sentences):** what the user would contribute and a concrete next step. Vary the closing — do NOT default to "I'd like to talk about this."
+
+Pull verbatim clauses from the raw material to fill each beat. If a beat has no matching material, write a one-sentence placeholder rather than inventing content. Do not pad. Do not collapse beats into one another.
 
 Pacing: vary sentence length. Mix short sentences (5-12 words) with longer ones. Break at natural stopping points. Do not merge unrelated clauses with em-dashes or semicolons.
 

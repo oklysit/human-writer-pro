@@ -36,13 +36,19 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     }
   }, [open, apiKey])
 
+  // In local OAuth dev mode (NEXT_PUBLIC_USE_LOCAL_OAUTH=1) the apiKey can
+  // be any non-empty string — the proxy at /api/v1/messages ignores it.
+  // Skip the sk-ant- format check in that mode so dummy-key testing works.
+  // See lib/anthropic-client.ts for the matching branch.
+  const useLocalOAuth = process.env.NEXT_PUBLIC_USE_LOCAL_OAUTH === "1"
+
   function handleSave() {
     const trimmed = value.trim()
     // Empty is allowed (clears the key). Non-empty must match Anthropic
-    // key format — silent acceptance of a bad key turns into a confusing
-    // error later when assembly tries to construct the client (see
-    // post-mvp-backlog.md #1).
-    if (trimmed.length > 0 && !trimmed.startsWith("sk-ant-")) {
+    // key format (in production BYO-key mode) — silent acceptance of a
+    // bad key turns into a confusing error later when assembly tries to
+    // construct the client (see post-mvp-backlog.md #1).
+    if (!useLocalOAuth && trimmed.length > 0 && !trimmed.startsWith("sk-ant-")) {
       setValidationError(
         "Anthropic API keys start with 'sk-ant-'. Get one at https://console.anthropic.com/settings/keys."
       )

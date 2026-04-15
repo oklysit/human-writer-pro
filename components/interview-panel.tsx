@@ -474,7 +474,18 @@ export function InterviewPanel() {
           {voice.supported ? (
             <button
               type="button"
-              onClick={() => (voice.recording ? voice.stop() : voice.start())}
+              onClick={() => {
+                if (voice.recording) {
+                  voice.stop();
+                  // Return focus to the textarea so the next Enter submits
+                  // instead of retoggling the mic button (the last clicked
+                  // element keeps focus by default — surprising UX after
+                  // dictation).
+                  inputTextareaRef.current?.focus();
+                } else {
+                  voice.start();
+                }
+              }}
               disabled={loading}
               aria-label={voice.recording ? "Stop voice input" : "Start voice input"}
               title={voice.recording ? "Stop recording" : "Start voice input"}

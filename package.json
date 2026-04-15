@@ -12,7 +12,7 @@
     "eval:cl": "tsx scripts/eval/run-cl-regression.ts",
     "eval:cl-diff": "tsx scripts/eval/compare-baselines.ts",
     "mojo:report": "tsx scripts/mojo-report.ts",
-    "postinstall": "mkdir -p public && cp -f node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/pdf.worker.min.mjs"
+    "postinstall": "mkdir -p public && cp -f node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs public/pdf.worker.min.mjs"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.107",

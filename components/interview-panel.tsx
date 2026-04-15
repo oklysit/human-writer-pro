@@ -272,68 +272,12 @@ export function InterviewPanel() {
   return (
     <div className="flex flex-col h-full bg-card border-r border-border">
       {/* Header removed 2026-04-15 — "Interview" label was redundant with
-          the app's whole purpose. The chat metaphor works better without
-          it. Context panel + turn history read as one unified flow. */}
-
-      {/* ------------------------------------------------------------------ */}
-      {/* 1b. Context — primary panel, always visible                         */}
-      {/* Free-form text the interviewer reads to ask better questions.       */}
-      {/* Never reaches the assembly call — see lib/store.ts contextNotes.    */}
-      {/* Pre-interview: larger textarea (encourages filling). During         */}
-      {/* interview: smaller, still editable.                                 */}
-      {/* ------------------------------------------------------------------ */}
-      <div className="px-5 py-3 border-b border-border shrink-0">
-        <div className="flex items-center justify-between mb-1.5">
-          <div className="flex items-center gap-2">
-            <span className="label-caps text-foreground">Context</span>
-            <span className="font-mono text-[0.625rem] text-muted-foreground/70 uppercase tracking-wider">
-              (required)
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            {contextNotes.trim() && (
-              <span className="font-mono text-xs text-muted-foreground">
-                {contextNotes.trim().length} chars
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading !== null}
-              className={cn(
-                "flex items-center gap-1 font-mono text-[0.625rem] uppercase tracking-wider",
-                "text-muted-foreground hover:text-foreground transition-colors",
-                uploading !== null && "opacity-50 cursor-not-allowed"
-              )}
-              title="Upload .md, .txt, .pdf, or .docx. Text is extracted in the browser and appended below."
-              aria-label="Upload context file"
-            >
-              <Paperclip className="h-3 w-3" aria-hidden />
-              {uploading !== null ? `Reading ${uploading}…` : "Upload"}
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".md,.txt,.pdf,.docx"
-              multiple
-              className="hidden"
-              onChange={(e) => void handleFileSelect(e)}
-            />
-          </div>
-        </div>
-        {uploadError && (
-          <p className="font-mono text-xs text-destructive mb-1.5">
-            {uploadError}
-          </p>
-        )}
-        <Textarea
-          value={contextNotes}
-          onChange={(e) => setContextNotes(e.target.value)}
-          placeholder="What are you writing, for whom, and what rules apply? Paste an assignment + rubric, a job posting, a reference doc, or anything else the interviewer should read before asking questions. You can also upload files (.md / .txt / .pdf / .docx). This context reaches ONLY the interviewer — never the final draft."
-          rows={turns.length === 0 ? 6 : 3}
-          className="resize-y font-mono text-xs"
-        />
-      </div>
+          the app's whole purpose. 2026-04-15 UAT: Context panel moved
+          from the top of the pane into the bottom input dock, so the
+          pre-interview state reads as "greeting above + context input
+          below", structurally matching the interview state ("questions
+          above + answer input below"). One consolidated chat metaphor
+          across both states. */}
 
       {/* ------------------------------------------------------------------ */}
       {/* 3. Assessment callout                                               */}
@@ -361,21 +305,14 @@ export function InterviewPanel() {
       {/* 4 + 5. Turn history (scrollable) + current question                */}
       {/* ------------------------------------------------------------------ */}
       <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4 min-h-0">
-        {/* Pre-interview greeting — styled like an assistant turn so the
-            pane reads as a chat thread from the first glance. Replaces
-            the old "Interview starting…" placeholder. */}
+        {/* Pre-interview greeting — single concise assistant-style message.
+            The Context input + Start button live in the bottom dock (below)
+            so this pane reads as a chat thread: greeting above, input below,
+            matching the interview state's layout. */}
         {turns.length === 0 && !loading && (
           <div className="pl-3 py-1 border-l-2 border-warning/40">
             <p className="font-body text-sm text-muted-foreground leading-relaxed">
-              {contextNotes.trim() ? (
-                <>
-                  Got your context. Click <strong className="text-foreground font-semibold">Start Interview</strong> when you're ready and I'll ask you a few questions about it. Your answers become the raw material I stitch the draft from — the more specific you get, the more of your voice lands in the output.
-                </>
-              ) : (
-                <>
-                  Welcome to Human Writer Pro. What are you writing? Paste the context above (job posting, assignment, reference doc) or upload a file — then click <strong className="text-foreground font-semibold">Start Interview</strong> and I'll ask questions to surface the material.
-                </>
-              )}
+              Welcome to Human Writer Pro. Paste or upload your context below — a job posting, an assignment, a reference doc, anything I should read before asking questions — then hit <strong className="text-foreground font-semibold">Start Interview</strong>. Your answers become the raw material I stitch the draft from, so the more specific you get, the more of your voice lands in the output.
             </p>
           </div>
         )}
@@ -427,19 +364,72 @@ export function InterviewPanel() {
       {/* 6 + 7. Pre-interview Start button OR active input area              */}
       {/* ------------------------------------------------------------------ */}
       {turns.length === 0 ? (
-        // Pre-interview: Start button only (the greeting in the turn-history
-        // area above already explains the flow). Mode selection alone does
-        // NOT auto-fire the first question — context-first workflow.
-        <div className="px-5 py-4 border-t border-border shrink-0 flex flex-col items-center gap-2">
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => void kickoff()}
-            disabled={loading || !apiKey || !contextNotes.trim()}
-            className="font-mono uppercase tracking-wider"
-          >
-            {loading ? "Starting…" : "Start Interview →"}
-          </Button>
+        // Pre-interview: Context input dock — textarea + upload + Start
+        // Interview. Structurally mirrors the interview's answer dock
+        // (textarea + mic + Next), so the pane reads as a chat thread
+        // across both states. Context is a "first user message" the user
+        // provides before the interview begins; Start Interview is the
+        // "send" equivalent.
+        <div className="px-5 py-3 border-t border-border shrink-0 flex flex-col gap-2">
+          {uploadError && (
+            <p className="font-mono text-xs text-destructive">{uploadError}</p>
+          )}
+          <label htmlFor="context-input" className="sr-only">
+            Context
+          </label>
+          <Textarea
+            id="context-input"
+            value={contextNotes}
+            onChange={(e) => setContextNotes(e.target.value)}
+            placeholder="Paste a job posting, assignment + rubric, reference doc, or any context to write from. This reaches only the interviewer — never the final draft."
+            rows={5}
+            className="resize-none font-mono text-xs"
+          />
+          <div className="flex items-center gap-2">
+            {/* Upload (file-as-context) */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading !== null}
+              aria-label="Upload context file"
+              title="Upload .md, .txt, .pdf, or .docx. Text is extracted in the browser and appended to the context."
+              className={cn(
+                "flex items-center justify-center h-9 w-9 rounded-sm border border-border transition-colors",
+                "text-muted-foreground hover:text-foreground hover:border-foreground",
+                uploading !== null && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              <Paperclip className="h-4 w-4" aria-hidden />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".md,.txt,.pdf,.docx"
+              multiple
+              className="hidden"
+              onChange={(e) => void handleFileSelect(e)}
+            />
+            {uploading !== null && (
+              <span className="font-mono text-xs text-muted-foreground">
+                Reading {uploading}…
+              </span>
+            )}
+            {contextNotes.trim() && uploading === null && (
+              <span className="font-mono text-xs text-muted-foreground">
+                {contextNotes.trim().length} chars
+              </span>
+            )}
+
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => void kickoff()}
+              disabled={loading || !apiKey || !contextNotes.trim()}
+              className="ml-auto font-mono uppercase tracking-wider"
+            >
+              {loading ? "Starting…" : "Start Interview →"}
+            </Button>
+          </div>
           {!apiKey && (
             <p className="font-mono text-xs text-destructive">
               Add your API key in Settings to begin.

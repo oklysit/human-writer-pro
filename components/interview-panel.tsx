@@ -38,6 +38,9 @@ export function InterviewPanel() {
 
   // Ref for scroll-to-bottom on new turns
   const historyEndRef = React.useRef<HTMLDivElement>(null);
+  // Ref for the input textarea — used to auto-scroll while voice dictation
+  // overflows the visible region (Loom-credibility fix; see post-mvp-backlog.md #2)
+  const inputTextareaRef = React.useRef<HTMLTextAreaElement>(null);
 
   // ---------------------------------------------------------------------------
   // Voice input
@@ -80,6 +83,16 @@ export function InterviewPanel() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voice.recording]);
+
+  // Auto-scroll the input textarea to the bottom while voice dictation is
+  // appending content — without this, voice transcripts that overflow the
+  // 3-row visible area land out of view (post-mvp-backlog #2). Only fires
+  // while recording so normal typing UX is unaffected.
+  React.useEffect(() => {
+    if (voice.recording && inputTextareaRef.current) {
+      inputTextareaRef.current.scrollTop = inputTextareaRef.current.scrollHeight;
+    }
+  }, [voice.recording, inputValue]);
 
   // ---------------------------------------------------------------------------
   // Derived values
@@ -201,9 +214,9 @@ export function InterviewPanel() {
     }
   }
 
-  // Cmd/Ctrl+Enter keyboard shortcut
+  // Enter to send; Shift+Enter for newline. Standard chat-app convention.
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       void handleSubmit();
     }
@@ -443,6 +456,7 @@ export function InterviewPanel() {
 
         <Textarea
           id="interview-input"
+          ref={inputTextareaRef}
           value={inputValue}
           onChange={(e) => {
             setInputValue(e.target.value);
@@ -505,9 +519,6 @@ export function InterviewPanel() {
           </Button>
         </div>
 
-        <p className="font-mono text-[0.625rem] text-muted-foreground/60 text-right">
-          Cmd+Enter to send
-        </p>
         </div>
       )}
     </div>

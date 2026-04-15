@@ -197,6 +197,22 @@ export function EditChat({ selectedParagraph, onClose, className }: EditChatProp
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voiceAnswer.recording]);
 
+  // Auto-scroll textareas during voice dictation so transcript stays in view
+  // as it appends past the visible region. Same Loom-credibility fix as the
+  // InterviewPanel input.
+  const complaintTextareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const answerTextareaRef = React.useRef<HTMLTextAreaElement>(null);
+  React.useEffect(() => {
+    if (voiceComplaint.recording && complaintTextareaRef.current) {
+      complaintTextareaRef.current.scrollTop = complaintTextareaRef.current.scrollHeight;
+    }
+  }, [voiceComplaint.recording, complaint]);
+  React.useEffect(() => {
+    if (voiceAnswer.recording && answerTextareaRef.current) {
+      answerTextareaRef.current.scrollTop = answerTextareaRef.current.scrollHeight;
+    }
+  }, [voiceAnswer.recording, userAnswer]);
+
   // Sync hidden / intro with selectedParagraph prop
   React.useEffect(() => {
     if (selectedParagraph !== null) {
@@ -312,7 +328,7 @@ export function EditChat({ selectedParagraph, onClose, className }: EditChatProp
     e: React.KeyboardEvent<HTMLTextAreaElement>,
     submit: () => void
   ): void {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       submit();
     }
@@ -366,6 +382,7 @@ export function EditChat({ selectedParagraph, onClose, className }: EditChatProp
           </label>
           <textarea
             id="edit-complaint"
+            ref={complaintTextareaRef}
             className="min-h-[72px] w-full resize-none border border-border bg-background p-2 font-body text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             placeholder="e.g. this doesn't sound like me, the tone is wrong, it's too vague..."
             value={complaint}
@@ -373,7 +390,7 @@ export function EditChat({ selectedParagraph, onClose, className }: EditChatProp
             onKeyDown={(e) => handleKeyDown(e, handleSendComplaint)}
           />
           <div className="flex items-center justify-between">
-            <span className="font-mono text-xs text-muted-foreground">Cmd+Enter to send</span>
+            <span className="font-mono text-xs text-muted-foreground">Enter to send · Shift+Enter for newline</span>
             <div className="flex items-center gap-2">
               <MicButton voice={voiceComplaint} />
               <Button
@@ -407,6 +424,7 @@ export function EditChat({ selectedParagraph, onClose, className }: EditChatProp
             <p className="font-body text-sm text-foreground leading-relaxed">{socraticQuestion}</p>
           </div>
           <textarea
+            ref={answerTextareaRef}
             className="min-h-[88px] w-full resize-none border border-border bg-background p-2 font-body text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             placeholder="Your answer (your words will be used verbatim)..."
             value={userAnswer}
@@ -414,7 +432,7 @@ export function EditChat({ selectedParagraph, onClose, className }: EditChatProp
             onKeyDown={(e) => handleKeyDown(e, handleSendAnswer)}
           />
           <div className="flex items-center justify-between">
-            <span className="font-mono text-xs text-muted-foreground">Cmd+Enter to send</span>
+            <span className="font-mono text-xs text-muted-foreground">Enter to send · Shift+Enter for newline</span>
             <div className="flex items-center gap-2">
               <MicButton voice={voiceAnswer} />
               <Button

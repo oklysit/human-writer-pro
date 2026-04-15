@@ -53,16 +53,18 @@ export async function extractText(file: File): Promise<string> {
 }
 
 async function extractPdfText(file: File): Promise<string> {
-  // Use the explicit .min.mjs build path. The bare "pdfjs-dist" entry
-  // hits a Next.js 14 webpack bundling failure where the ESM namespace
-  // gets wrapped in a frozen proxy and pdfjs's internal Object.defineProperty
-  // calls fail with "called on non-object". The build/pdf.min.mjs path
-  // gets bundled as a separate chunk that doesn't trip the wrapper.
+  // Use the LEGACY build path. The main build in pdfjs-dist 5.x uses
+  // Uint8Array.prototype.toHex() which isn't available in all browser
+  // runtimes (UAT 2026-04-15 surfaced "n.toHex is not a function" on
+  // a real-world PDF). The legacy build targets older runtimes and
+  // polyfills the missing methods. Also avoids the earlier Next.js 14
+  // webpack wrapping failure (fixed 2026-04-15 by the explicit .mjs
+  // subpath import — same approach, different sub-directory).
   let pdfjs: typeof import("pdfjs-dist");
   try {
-    // @ts-expect-error pdfjs-dist 5.x doesn't ship .d.ts for the subpath
-    // entries, but the runtime exports match the root entry exactly.
-    pdfjs = (await import("pdfjs-dist/build/pdf.min.mjs")) as typeof import("pdfjs-dist");
+    // Legacy subpath ships .d.mts types (pdf.d.mts) so no @ts-expect-error
+    // needed. Runtime exports match the root entry exactly.
+    pdfjs = (await import("pdfjs-dist/legacy/build/pdf.mjs")) as typeof import("pdfjs-dist");
   } catch (err) {
     throw new Error(
       `pdfjs-dist module load failed: ${err instanceof Error ? err.message : String(err)}`
@@ -71,8 +73,9 @@ async function extractPdfText(file: File): Promise<string> {
   const { getDocument, GlobalWorkerOptions } = pdfjs;
 
   // Worker is copied to /public/pdf.worker.min.mjs at install time so it
-  // ships at same-origin (CSP script-src 'self' allows). If pdfjs-dist
-  // is upgraded, the postinstall script re-copies it.
+  // ships at same-origin (CSP script-src 'self' allows). The legacy worker
+  // is used to match the legacy main build — worker/main version skew
+  // will throw at getDocument time, so they must match.
   if (!GlobalWorkerOptions.workerSrc) {
     GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
   }

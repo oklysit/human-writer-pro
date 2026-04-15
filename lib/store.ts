@@ -51,6 +51,19 @@ export type AppState = {
     lastAssessment: LastAssessment;
   };
   output: string;
+  /**
+   * Where the output came from. "interview" = produced by the assemble call
+   * after an interview. "upload" = the user uploaded an existing draft into
+   * the output panel for edit-mode regeneration. null when output is empty.
+   * Drives which assemble-with-feedback prompt regime the regen call uses.
+   */
+  outputSource: "interview" | "upload" | null;
+  /**
+   * When outputSource === "upload", holds the original upload content. The
+   * regen call uses it as the rawInterview for stitching, since there's no
+   * real interview transcript in the upload flow. Null otherwise.
+   */
+  uploadedDraftContent: string | null;
   vrScore: VRResult | null;
   edits: EditTurn[];
   isGenerating: boolean;
@@ -65,6 +78,11 @@ type AppActions = {
   setInterviewStatus: (status: AppState["interview"]["status"]) => void;
   setLastAssessment: (assessment: LastAssessment) => void;
   setOutput: (output: string) => void;
+  /**
+   * Replaces the output AND sets it as upload-sourced for regen routing.
+   * Called by the upload-to-output flow in preview-panel.
+   */
+  setUploadedDraft: (content: string) => void;
   setVRScore: (score: VRResult | null) => void;
   addEdit: (turn: EditTurn) => void;
   setGenerating: (isGen: boolean) => void;
@@ -83,6 +101,8 @@ const initialState: AppState = {
     lastAssessment: null,
   },
   output: "",
+  outputSource: null,
+  uploadedDraftContent: null,
   vrScore: null,
   edits: [],
   isGenerating: false,
@@ -102,6 +122,8 @@ export const useSessionStore = create<AppState & AppActions>()(
           contextNotes: "",
           interview: { ...initialState.interview },
           output: "",
+          outputSource: null,
+          uploadedDraftContent: null,
           vrScore: null,
           edits: [],
           error: null,
@@ -130,7 +152,23 @@ export const useSessionStore = create<AppState & AppActions>()(
       setLastAssessment: (lastAssessment) =>
         set((state) => ({ interview: { ...state.interview, lastAssessment } })),
 
-      setOutput: (output) => set({ output, vrScore: null }),
+      setOutput: (output) =>
+        set((state) => ({
+          output,
+          vrScore: null,
+          // First-time output from interview-driven assembly: tag the source.
+          // Re-renders during streaming preserve the existing source tag.
+          outputSource:
+            output.length > 0 && state.outputSource === null ? "interview" : state.outputSource,
+        })),
+
+      setUploadedDraft: (content) =>
+        set({
+          output: content,
+          outputSource: "upload",
+          uploadedDraftContent: content,
+          vrScore: null,
+        }),
 
       setVRScore: (score) => set({ vrScore: score }),
 

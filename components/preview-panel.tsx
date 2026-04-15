@@ -1,12 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { Mic, MicOff, Paperclip, RotateCw, X } from "lucide-react";
 import { useSessionStore } from "@/lib/store";
 import { computeVR } from "@/lib/verbatim-ratio";
 import { detect, highlightSegments } from "@/lib/ai-ism-detector";
 import type { AIIsmMatch } from "@/lib/ai-ism-detector";
+import { extractText, isSupported } from "@/lib/fileImport";
+import { useVoiceInput } from "@/lib/useVoiceInput";
 import { DiagnosticPills } from "@/components/diagnostic-pills";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -47,16 +50,81 @@ type PreviewPanelProps = {
   className?: string;
   /** Called when the user clicks "Regenerate avoiding these" in DiagnosticPills. */
   onRegenerate?: (matches: AIIsmMatch[]) => void;
+  /**
+   * Called when the user submits voice/text feedback for a whole-output
+   * regenerate. Parent fires the assembleWithFeedback call; preview-panel
+   * just collects the feedback string.
+   */
+  onRegenerateWithFeedback?: (feedback: string) => void;
 };
 
-export function PreviewPanel({ className, onRegenerate }: PreviewPanelProps): JSX.Element {
+export function PreviewPanel({
+  className,
+  onRegenerate,
+  onRegenerateWithFeedback,
+}: PreviewPanelProps): JSX.Element {
   const output = useSessionStore((s) => s.output);
   const isGenerating = useSessionStore((s) => s.isGenerating);
   const vrScore = useSessionStore((s) => s.vrScore);
   const setVRScore = useSessionStore((s) => s.setVRScore);
   const mode = useSessionStore((s) => s.mode);
+  const setUploadedDraft = useSessionStore((s) => s.setUploadedDraft);
+  const setError = useSessionStore((s) => s.setError);
 
   const [aiIsmMatches, setAiIsmMatches] = useState<AIIsmMatch[]>([]);
+
+  // ---- Upload-to-output state ----
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ---- Regenerate-with-feedback state ----
+  const [regenOpen, setRegenOpen] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  const feedbackTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const baseFeedbackRef = useRef("");
+
+  const voice = useVoiceInput({
+    onError: (msg) => setError(msg),
+  });
+
+  // Snapshot textarea on recording start
+  const prevRecording = useRef(false);
+  useEffect(() => {
+    if (voice.recording && !prevRecording.current) {
+      baseFeedbackRef.current = feedback;
+    }
+    prevRecording.current = voice.recording;
+  });
+
+  // Live preview during recording
+  useEffect(() => {
+    if (!voice.recording) return;
+    const base = baseFeedbackRef.current;
+    const separator = base.length > 0 && !base.endsWith(" ") ? " " : "";
+    const preview = voice.finalTranscript + voice.interimTranscript;
+    if (preview) {
+      setFeedback(base + separator + preview);
+    }
+  }, [voice.recording, voice.finalTranscript, voice.interimTranscript]);
+
+  // Commit on stop
+  useEffect(() => {
+    if (!voice.recording && voice.finalTranscript) {
+      const base = baseFeedbackRef.current;
+      const separator = base.length > 0 && !base.endsWith(" ") ? " " : "";
+      setFeedback(base + separator + voice.finalTranscript);
+      baseFeedbackRef.current = "";
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voice.recording]);
+
+  // Autoscroll feedback textarea while dictating
+  useEffect(() => {
+    if (voice.recording && feedbackTextareaRef.current) {
+      feedbackTextareaRef.current.scrollTop = feedbackTextareaRef.current.scrollHeight;
+    }
+  }, [voice.recording, feedback]);
 
   const { toast } = useToast();
 
@@ -72,10 +140,12 @@ export function PreviewPanel({ className, onRegenerate }: PreviewPanelProps): JS
     }
   }, [isGenerating, output, vrScore, setVRScore]);
 
-  // Clear AI-ism matches when output is cleared (e.g., on a new assemble run).
+  // Clear AI-ism matches + close regen panel when output is cleared
   useEffect(() => {
     if (output.length === 0) {
       setAiIsmMatches([]);
+      setRegenOpen(false);
+      setFeedback("");
     }
   }, [output]);
 
@@ -100,6 +170,62 @@ export function PreviewPanel({ className, onRegenerate }: PreviewPanelProps): JS
     a.download = `${modeName}-draft.md`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  // ---- Upload-to-output ----
+  async function handleUploadFile(e: React.ChangeEvent<HTMLInputElement>): Promise<void> {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError(null);
+
+    if (!isSupported(file.name)) {
+      setUploadError(`Unsupported: ${file.name}. Use .md / .txt / .pdf / .docx.`);
+      return;
+    }
+    setUploading(file.name);
+    try {
+      const text = await extractText(file);
+      if (!text) {
+        setUploadError(`No text extracted from ${file.name}.`);
+        return;
+      }
+      setUploadedDraft(text);
+      toast({ title: "Draft loaded", description: `${file.name} ready to edit.` });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : `Failed to read ${file.name}`;
+      setUploadError(msg);
+    } finally {
+      setUploading(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  // ---- Regenerate-with-feedback handlers ----
+  function handleSendFeedback(): void {
+    const trimmed = feedback.trim();
+    if (!trimmed || !onRegenerateWithFeedback) return;
+    voice.stop();
+    voice.reset();
+    onRegenerateWithFeedback(trimmed);
+    setFeedback("");
+    setRegenOpen(false);
+  }
+
+  function handleCancelFeedback(): void {
+    voice.stop();
+    voice.reset();
+    setFeedback("");
+    setRegenOpen(false);
+  }
+
+  function handleFeedbackKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>): void {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendFeedback();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      handleCancelFeedback();
+    }
   }
 
   return (
@@ -128,9 +254,37 @@ export function PreviewPanel({ className, onRegenerate }: PreviewPanelProps): JS
               </p>
             </>
           ) : (
-            <p className="font-body text-sm text-muted-foreground">
-              Your assembled piece will appear here.
-            </p>
+            <>
+              <p className="font-body text-sm text-muted-foreground">
+                Your assembled piece will appear here.
+              </p>
+              <div className="flex flex-col gap-1">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading !== null}
+                  className={cn(
+                    "self-start flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider",
+                    "text-muted-foreground hover:text-foreground transition-colors",
+                    uploading !== null && "opacity-50 cursor-not-allowed"
+                  )}
+                  title="Upload an existing draft (.md / .txt / .pdf / .docx) to refine it with voice/text feedback."
+                >
+                  <Paperclip className="h-3 w-3" aria-hidden />
+                  {uploading !== null ? `Reading ${uploading}…` : "Or upload an existing draft to edit"}
+                </button>
+                {uploadError && (
+                  <p className="font-mono text-xs text-destructive">{uploadError}</p>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".md,.txt,.pdf,.docx"
+                  className="hidden"
+                  onChange={(e) => void handleUploadFile(e)}
+                />
+              </div>
+            </>
           )}
         </div>
       ) : (
@@ -155,7 +309,7 @@ export function PreviewPanel({ className, onRegenerate }: PreviewPanelProps): JS
             )}
           </div>
 
-          {/* Diagnostics */}
+          {/* Diagnostics + actions (only when not actively streaming) */}
           {!isGenerating && (
             <>
               <DiagnosticPills
@@ -165,7 +319,7 @@ export function PreviewPanel({ className, onRegenerate }: PreviewPanelProps): JS
               />
 
               {/* Footer actions */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button
                   variant="secondary"
                   size="sm"
@@ -182,7 +336,97 @@ export function PreviewPanel({ className, onRegenerate }: PreviewPanelProps): JS
                 >
                   Download
                 </Button>
+                {onRegenerateWithFeedback && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => setRegenOpen((o) => !o)}
+                    className="font-mono text-xs uppercase tracking-wider flex items-center gap-1.5"
+                  >
+                    <RotateCw className="h-3 w-3" aria-hidden />
+                    Regenerate with feedback
+                  </Button>
+                )}
               </div>
+
+              {/* Regenerate panel — expanded on demand */}
+              {regenOpen && (
+                <div className="flex flex-col gap-3 border border-border bg-card p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="label-caps text-foreground">What should change?</span>
+                    <button
+                      type="button"
+                      onClick={handleCancelFeedback}
+                      aria-label="Cancel feedback (Esc)"
+                      title="Cancel (Esc)"
+                      className={cn(
+                        "flex items-center justify-center h-7 w-7 rounded-sm",
+                        "text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      )}
+                    >
+                      <X className="h-4 w-4" aria-hidden />
+                    </button>
+                  </div>
+                  <textarea
+                    ref={feedbackTextareaRef}
+                    className="min-h-[88px] w-full resize-none border border-border bg-background p-2 font-body text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    placeholder="e.g. tighten the intro to focus on the AI agents moment; remove the WGU course mention; vary the closing line..."
+                    value={feedback}
+                    onChange={(e) => setFeedback(e.target.value)}
+                    onKeyDown={handleFeedbackKeyDown}
+                    autoFocus
+                  />
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs text-muted-foreground">
+                      Enter to send · Shift+Enter for newline · Esc to cancel
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {/* Mic */}
+                      {voice.supported ? (
+                        <button
+                          type="button"
+                          onClick={() => (voice.recording ? voice.stop() : voice.start())}
+                          aria-label={voice.recording ? "Stop voice input" : "Start voice input"}
+                          title={voice.recording ? "Stop recording" : "Start voice input"}
+                          className={cn(
+                            "flex items-center justify-center h-9 w-9 rounded-sm border border-border transition-colors",
+                            voice.recording
+                              ? "text-accent border-accent animate-pulse"
+                              : "text-muted-foreground hover:text-foreground hover:border-foreground"
+                          )}
+                        >
+                          {voice.recording ? (
+                            <MicOff className="h-4 w-4" aria-hidden />
+                          ) : (
+                            <Mic className="h-4 w-4" aria-hidden />
+                          )}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled
+                          aria-label="Voice input unavailable"
+                          title="Voice input not supported in this browser. Chrome or Edge recommended."
+                          className={cn(
+                            "flex items-center justify-center h-9 w-9 rounded-sm border border-border",
+                            "text-muted-foreground cursor-not-allowed opacity-40"
+                          )}
+                        >
+                          <Mic className="h-4 w-4" aria-hidden />
+                        </button>
+                      )}
+                      <Button
+                        size="sm"
+                        onClick={handleSendFeedback}
+                        disabled={!feedback.trim()}
+                        className="font-mono text-xs uppercase tracking-wider"
+                      >
+                        Regenerate
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </>

@@ -42,6 +42,16 @@ import { createAnthropicClient, streamClaude } from "./anthropic-client";
  *   VR collapse. The "heavy verbatim stitching" instruction still
  *   governs HOW clauses get lifted; the new block governs WHERE they go
  *   and how they pace.
+ * - 2026-04-15 (v3): inserted numbered procedural verbatim-first block
+ *   between the killer-CL framework and Pacing, replacing the single-
+ *   paragraph "Pull verbatim clauses…" directive. Per consultant memo:
+ *   the prior prompt was declarative about verbatim stitching (WHAT to
+ *   do) but not procedural (what ORDER to do it). Sonnet defaults to
+ *   compose → inject unless explicit step-by-step ordering forces
+ *   read-raw-first. The 75% traceability test gives the model a
+ *   self-check anchor. Keeps "Target 5-gram VR ≈ 35%" line; open
+ *   question on whether that target does work or is cargo-culted from
+ *   the pilot — separate matched-pair experiment after this ships.
  *
  * This is a deviation from the locked source-of-truth file at
  * eval/regression-fixtures/prompts/band-35-strategy.md — that file
@@ -87,7 +97,18 @@ What each paragraph needs (the "Killer Cover Letter" framework — Shikhar, r/da
 
 5. **Conclusion:** what the user would contribute + a concrete next step. Vary the closing — do NOT default to "I'd like to talk about this".
 
-Pull verbatim clauses from the raw material to fill each paragraph. If a paragraph has no matching material, write a one-sentence placeholder rather than inventing content. Do not pad. Do not collapse paragraphs into one another. The five-paragraph structure is non-negotiable even when input material is uneven across beats.
+Procedure — follow in this exact order for each paragraph:
+
+1. Read the raw material below. Identify sentences or clauses that belong in the current paragraph.
+2. Write those sentences into the paragraph almost exactly as the user spoke them. Preserve the user's phrasing even if it is slightly rough.
+3. Only write connective tissue where there is literally no raw material for a transition. Connectives should be short and neutral.
+4. Never paraphrase a verbatim sentence into "better" prose. If the user said something, use their words.
+5. Light filler removal is allowed: remove "you know", "kinda", "sort of", "I mean", "like" as a filler word. Do not rewrite the sentence around the removal.
+6. After the paragraph is drafted, verify: each sentence should be traceable to a specific moment in the raw material. If a sentence cannot be traced, delete it or replace it with a verbatim lift.
+
+The test: 75%+ of sentences in the final output should be directly traceable to the raw material. The structural beats tell you where clauses go. This procedure tells you how to get them there — go to the raw first, always.
+
+If a paragraph has no matching material, write a one-sentence placeholder rather than inventing content. Do not pad. Do not collapse paragraphs into one another. The five-paragraph structure is non-negotiable even when input material is uneven across beats.
 
 Pacing: vary sentence length within each paragraph. Mix short sentences (5-12 words) with longer ones. Break at natural stopping points. Do not merge unrelated clauses with em-dashes or semicolons.
 

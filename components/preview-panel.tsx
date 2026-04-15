@@ -129,11 +129,18 @@ export function PreviewPanel({
   const { toast } = useToast();
 
   // Compute VR score and run AI-ism detection once streaming completes.
+  // For upload-sourced output, VR is computed against the upload (the
+  // material the user is iterating from), not the empty interview
+  // transcript — otherwise it would always read 0% and confuse.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!isGenerating && output.length > 0 && vrScore === null) {
-      const rawInterview = useSessionStore.getState().interview.rawTranscript;
-      const result = computeVR(rawInterview, output);
+      const state = useSessionStore.getState();
+      const rawSource =
+        state.outputSource === "upload" && state.uploadedDraftContent
+          ? state.uploadedDraftContent
+          : state.interview.rawTranscript;
+      const result = computeVR(rawSource, output);
       setVRScore(result);
       // Run the AI-ism detector on the completed output.
       setAiIsmMatches(detect(output));

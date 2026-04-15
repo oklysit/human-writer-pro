@@ -184,14 +184,10 @@ export const useSessionStore = create<AppState & AppActions>()(
 // ---------------------------------------------------------------------------
 
 /**
- * Returns true when the user has provided enough thinking to assemble:
- * - raw interview word count >= 150
- * - coverage score >= 0.6
- * Defense-in-depth gate independent of engine-emitted "ready-to-assemble" status.
+ * Returns true when assembly is meaningful — at least one user turn exists.
+ * The user controls when to assemble; the model's conversational response
+ * carries any "ready" signal. No coverage or word-count gate (2026-04-15).
  */
 export function useCanAssemble(): boolean {
-  return useSessionStore((s) => {
-    const words = countUserWords(s.interview.turns);
-    return canAssemble(s.interview.coverageScore, words);
-  });
+  return useSessionStore((s) => s.interview.turns.some((t) => t.role === "user"));
 }

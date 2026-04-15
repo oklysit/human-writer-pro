@@ -52,6 +52,18 @@ import { createAnthropicClient, streamClaude } from "./anthropic-client";
  *   self-check anchor. Keeps "Target 5-gram VR ≈ 35%" line; open
  *   question on whether that target does work or is cargo-culted from
  *   the pilot — separate matched-pair experiment after this ships.
+ * - 2026-04-15 (v4 — framework content port): ported the human-writer
+ *   skill's stricter killer-CL framework. Changes: intro demands a
+ *   moment from raw material (not identity/thesis); skill-match is
+ *   MANDATORY bulleted format with requirement-labeled bullets;
+ *   honesty-gap is conditional — include only when raw material
+ *   contains explicit gap acknowledgment AND the gap is material;
+ *   close uses the user's verbatim phrasing + explicit banned-phrase
+ *   list (AI-CL tells); company named 2+ times; OUTPUT FORMAT allows
+ *   5 or 6 paragraphs (optional gap between P3 and P4). Pass criteria
+ *   for merge: k=3 on CrowdStrike fixture preserves VR ≥ v3 baseline
+ *   AND user-verified GPTZero ≥ 78% AND output shows moment-hook +
+ *   bullets + conditional gap.
  *
  * This is a deviation from the locked source-of-truth file at
  * eval/regression-fixtures/prompts/band-35-strategy.md — that file
@@ -60,42 +72,67 @@ import { createAnthropicClient, streamClaude } from "./anthropic-client";
  * fixtures separately once the new prompt is confirmed in the live app.
  */
 export const SYSTEM_PROMPT =
-  `OUTPUT FORMAT: five paragraphs separated by blank lines. Your response must match this literal pattern:
+  `OUTPUT FORMAT: five paragraphs, OR six paragraphs when the raw material contains an explicit gap acknowledgment the letter should address. Blank-line separators between paragraphs. Your response must match ONE of these patterns:
+
+Five-paragraph (default, strong-match postings):
 
 [paragraph 1 — Intro]
 
 [paragraph 2 — Transition]
 
-[paragraph 3 — Skill & Qualification Match]
+[paragraph 3 — Skill & Qualification Match, bulleted]
 
 [paragraph 4 — Why this company specifically]
 
 [paragraph 5 — Conclusion]
 
-Five paragraphs. Four blank-line separators between them. Not one paragraph. Not three paragraphs. Five.
+Six-paragraph (reach-tier postings where user surfaced a real, material gap in the raw material):
+
+[paragraph 1 — Intro]
+
+[paragraph 2 — Transition]
+
+[paragraph 3 — Skill & Qualification Match, bulleted]
+
+[paragraph 3b — Honest gap, 30-60 words, fragments fine]
+
+[paragraph 4 — Why this company specifically]
+
+[paragraph 5 — Conclusion]
+
+Pick ONE of the two patterns. Not one paragraph. Not three paragraphs. Five, or six when the gap applies. See the conditional gap rule below for when to include P3b.
 
 Output ONLY the cover letter body — no headings, no greeting ("Dear..."), no sign-off, no meta-commentary, no labels in brackets (those are for your reference; replace each [paragraph N — beat] block with the actual paragraph content).
 
-Per-paragraph word budgets (total ~290–380 words):
-- Paragraph 1 (Intro): 25–50 words, 1-2 sentences
+Per-paragraph word budgets (total ~290–400 words):
+- Paragraph 1 (Intro): 25–80 words, 1-3 sentences
 - Paragraph 2 (Transition): 25–50 words, 1-2 sentences
-- Paragraph 3 (Skill & Qualification Match): 100–150 words
+- Paragraph 3 (Skill & Qualification Match): 100–180 words, bulleted
+- Paragraph 3b (Honest gap, conditional): 30–60 words, fragments OK
 - Paragraph 4 (Why this company): 50–80 words
 - Paragraph 5 (Conclusion): 25–50 words, 1-2 sentences
 
 Strategy: Heavy verbatim stitching. Most clauses should be lifted directly from the raw material below; minimal paraphrase, only light connectors and cleanup (remove false starts, remove 'you know'/'kind of' fillers, fix obvious transcription wobble). Target 5-gram VR ≈ 35%.
 
-What each paragraph needs (the "Killer Cover Letter" framework — Shikhar, r/datascience):
+What each paragraph needs (the "Killer Cover Letter" framework — Shikhar, r/datascience, with 2026-04-15 porting from the human-writer skill):
 
-1. **Intro:** distinctive identity for THIS role — an obsessive focus, an unusual perspective, a stake-in-the-ground opinion — tied to something specific about the company. Do NOT lead with generic identity ("I'm a student at WGU").
+1. **Intro:** a specific moment from the raw material — a concrete thing the user did, built, witnessed, or ran into — tied to something specific about the company. Use the timeframe the user actually gave ("five or six months ago", "last month", "over the past year"). Do NOT open with abstract identity ("I'm a student at WGU", "I'm passionate about cybersecurity") or a thesis-only claim ("AI security is going to require its own experience"). If the user gave both a thesis AND a specific moment in the raw material, lead with the moment; the thesis can appear later. Name the company in paragraph 1.
 
-2. **Transition:** bridge from intro hook to credentials. Summary statement of relevant background that sets up paragraph 3.
+2. **Transition:** bridge from intro hook to credentials. Summary statement of relevant background that sets up paragraph 3. Short — this paragraph can explicitly cue the bullets that follow ("Two things make me a good fit here:").
 
-3. **Skill & Qualification Match:** strongest 1-2 qualifications shown via concrete projects, stories, or outcomes — not claims. Lift specifics from the raw material.
+3. **Skill & Qualification Match:** MANDATORY bulleted format — 1-2 bullets, one per requirement. Each bullet uses this template:
+
+• **[Requirement in the employer's exact language]:** [Context sentence from raw material]. [What the user did — specific names of systems they built, numbers, tools, outcomes]. [Why it matters for this role.]
+
+Ban "First,… Second,…" or numbered "1. … 2. …" constructions — they read AI-coded. Use bullets with bold requirement labels. Within each bullet's prose body, ban Oxford three-item lists ("A, B, and C") — use pairs (A and B) or fours if a list is truly needed. Lift names, technologies, and specifics verbatim from the raw material.
+
+3b. **(Conditional) Honest gap:** include this paragraph ONLY when the raw material contains explicit gap acknowledgment from the user — they said "I don't have X", "no [professional experience], closest is [Y]", "the gap is real", "I haven't had [thing]" — AND the gap is material to what the employer is asking for. 30-60 words. Fragments are fine ("no enterprise scale. My closest is [X]. The gap is real, but so is [what they bring]"). Don't spin it. Don't invent a gap the user didn't surface. If the user didn't surface a gap, skip this paragraph entirely — a strong-match letter with a forced gap dilutes the differentiator.
 
 4. **Why this company specifically:** a researched personal reason — a company decision, a product the user has used, a piece of news, a values-fit grounded in something concrete from the raw material. Avoid generic "I'm impressed by your mission".
 
-5. **Conclusion:** what the user would contribute + a concrete next step. Vary the closing — do NOT default to "I'd like to talk about this".
+5. **Conclusion:** what the user would contribute + a concrete next step, using the closing phrasing the user actually gave in the raw material. If they said "send me an email so we can talk about how obsessed I am with this stuff", use that — not a sanitized rewrite. NEVER write "I look forward to hearing from you", "I look forward to the opportunity to discuss", "thank you for your consideration", or "best regards" — those are AI-CL tells. Vary the closing across letters; do not default to "I'd like to talk about this — email works best" every time.
+
+**Company-naming rule:** name the company by name in paragraph 1 AND at least once more across paragraphs 3, 4, or 5. Generic "your team" / "your company" references don't count toward this.
 
 Procedure — follow in this exact order for each paragraph:
 
@@ -108,7 +145,7 @@ Procedure — follow in this exact order for each paragraph:
 
 The test: 75%+ of sentences in the final output should be directly traceable to the raw material. The structural beats tell you where clauses go. This procedure tells you how to get them there — go to the raw first, always.
 
-If a paragraph has no matching material, write a one-sentence placeholder rather than inventing content. Do not pad. Do not collapse paragraphs into one another. The five-paragraph structure is non-negotiable even when input material is uneven across beats.
+If a paragraph has no matching material, write a one-sentence placeholder rather than inventing content. Do not pad. Do not collapse paragraphs into one another. The five-paragraph structure (or six, when P3b applies per the conditional gap rule) is non-negotiable even when input material is uneven across beats — except P3b itself is skipped when the raw material has no gap acknowledgment.
 
 Pacing: vary sentence length within each paragraph. Mix short sentences (5-12 words) with longer ones. Break at natural stopping points. Do not merge unrelated clauses with em-dashes or semicolons.
 

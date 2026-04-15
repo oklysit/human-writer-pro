@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useSessionStore } from "@/lib/store";
 import { askNextQuestion } from "@/lib/interview-engine";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useVoiceInput } from "@/lib/useVoiceInput";
 import { extractText, isSupported } from "@/lib/fileImport";
@@ -35,6 +36,7 @@ export function InterviewPanel() {
   const [uploading, setUploading] = React.useState<string | null>(null);
   const [uploadError, setUploadError] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   // Ref for scroll-to-bottom on new turns
   const historyEndRef = React.useRef<HTMLDivElement>(null);
@@ -294,6 +296,17 @@ export function InterviewPanel() {
         setContextNotes(
           `${current}${separator}--- From: ${file.name} ---\n\n${text}`
         );
+        // Mid-interview feedback: confirm the upload landed. During
+        // pre-interview the char-count next to the paperclip does the
+        // same job; the toast matters most once the interview has
+        // started and the user can't see contextNotes directly.
+        toast({
+          title: "Context added",
+          description:
+            turns.length > 0
+              ? `${file.name} — the interviewer will reference it in the next question.`
+              : `${file.name}`,
+        });
       } catch (err) {
         const msg = err instanceof Error ? err.message : `Failed to read ${file.name}`;
         setUploadError(msg);
@@ -314,6 +327,18 @@ export function InterviewPanel() {
 
   return (
     <div className="flex flex-col h-full bg-card border-r border-border">
+      {/* Single always-rendered file input shared by both dock paperclips
+          (pre-interview Context dock + answer dock). Lives here so
+          fileInputRef.current is valid regardless of dock state. */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".md,.txt,.pdf,.docx"
+        multiple
+        className="hidden"
+        onChange={(e) => void handleFileSelect(e)}
+      />
+
       {/* Header removed 2026-04-15 — "Interview" label was redundant with
           the app's whole purpose. 2026-04-15 UAT: Context panel moved
           from the top of the pane into the bottom input dock, so the
@@ -445,14 +470,6 @@ export function InterviewPanel() {
             >
               <Paperclip className="h-4 w-4" aria-hidden />
             </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".md,.txt,.pdf,.docx"
-              multiple
-              className="hidden"
-              onChange={(e) => void handleFileSelect(e)}
-            />
 
             {/* Mic (dictate context) */}
             {voiceContext.supported ? (
@@ -550,6 +567,25 @@ export function InterviewPanel() {
         />
 
         <div className="flex items-center gap-2">
+          {/* Upload additional context mid-interview — clicks the same
+              hidden file input as the pre-interview dock; handleFileSelect
+              fires a toast so the user sees confirmation that the
+              interviewer now has the new material. */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={loading || uploading !== null}
+            aria-label="Add context file"
+            title="Add more context (.md / .txt / .pdf / .docx). The interviewer will reference it in the next question."
+            className={cn(
+              "flex items-center justify-center h-9 w-9 rounded-sm border border-border transition-colors",
+              "text-muted-foreground hover:text-foreground hover:border-foreground",
+              (loading || uploading !== null) && "opacity-40 cursor-not-allowed"
+            )}
+          >
+            <Paperclip className="h-4 w-4" aria-hidden />
+          </button>
+
           {/* Voice input button */}
           {voice.supported ? (
             <button
@@ -598,6 +634,12 @@ export function InterviewPanel() {
             </button>
           )}
 
+          {uploading !== null && (
+            <span className="font-mono text-xs text-muted-foreground">
+              Reading {uploading}…
+            </span>
+          )}
+
           <Button
             variant="default"
             size="sm"
@@ -609,6 +651,9 @@ export function InterviewPanel() {
             {loading ? "…" : "Next →"}
           </Button>
         </div>
+        {uploadError && (
+          <p className="font-mono text-xs text-destructive">{uploadError}</p>
+        )}
 
         </div>
       )}

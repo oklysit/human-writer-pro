@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useSessionStore } from "@/lib/store";
 import { askNextQuestion } from "@/lib/interview-engine";
+import { detectWritingMode } from "@/lib/detectWritingMode";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useVoiceInput } from "@/lib/useVoiceInput";
@@ -165,10 +166,20 @@ export function InterviewPanel() {
   async function kickoff() {
     if (!mode || !apiKey || turns.length > 0 || loading) return;
     if (!contextNotes.trim()) return;
+
+    // Detect writing mode from context and update the store so the
+    // interviewer picks the right mode guidance (cover-letter vs email
+    // vs essay etc). Uses `updateMode` (soft update, preserves session
+    // state) — NOT `setMode` which wipes context + turns.
+    const detectedMode = detectWritingMode(contextNotes);
+    if (detectedMode !== mode) {
+      useSessionStore.getState().updateMode(detectedMode);
+    }
+
     setLoading(true);
     try {
       const result = await askNextQuestion({
-        mode,
+        mode: detectedMode,
         apiKey,
         history: [],
         contextNotes,

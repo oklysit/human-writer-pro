@@ -72,7 +72,11 @@ export type AppState = {
 
 type AppActions = {
   setApiKey: (key: string | null) => void;
+  /** Hard mode switch — resets session state (turns, output, context). */
   setMode: (mode: Mode) => void;
+  /** Soft mode update — just re-tags the detected mode without resetting
+   *  other state. Used by the heuristic mode-detection pipeline. */
+  updateMode: (mode: Mode) => void;
   setContextNotes: (notes: string) => void;
   addInterviewTurn: (turn: InterviewTurn) => void;
   setInterviewStatus: (status: AppState["interview"]["status"]) => void;
@@ -128,6 +132,8 @@ export const useSessionStore = create<AppState & AppActions>()(
           edits: [],
           error: null,
         }),
+
+      updateMode: (mode) => set({ mode }),
 
       setContextNotes: (contextNotes) => set({ contextNotes }),
 

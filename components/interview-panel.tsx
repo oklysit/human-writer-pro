@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useSessionStore } from "@/lib/store";
 import { askNextQuestion } from "@/lib/interview-engine";
-import { countUserWords } from "@/lib/coverage";
 import { cn } from "@/lib/utils";
 import { useVoiceInput } from "@/lib/useVoiceInput";
 
@@ -18,10 +17,7 @@ export function InterviewPanel() {
   const mode = useSessionStore((s) => s.mode);
   const contextNotes = useSessionStore((s) => s.contextNotes);
   const turns = useSessionStore((s) => s.interview.turns);
-  const coverageScore = useSessionStore((s) => s.interview.coverageScore);
   const lastAssessment = useSessionStore((s) => s.interview.lastAssessment);
-  const rawTranscript = useSessionStore((s) => s.interview.rawTranscript);
-  const interviewStatus = useSessionStore((s) => s.interview.status);
 
   const setContextNotes = useSessionStore((s) => s.setContextNotes);
   const addInterviewTurn = useSessionStore((s) => s.addInterviewTurn);
@@ -86,10 +82,9 @@ export function InterviewPanel() {
   // ---------------------------------------------------------------------------
   // Derived values
   // ---------------------------------------------------------------------------
-  const userTurnCount = turns.filter((t) => t.role === "user").length;
-  const wordCount = countUserWords(turns);
-  const coveragePct = Math.round(coverageScore * 100);
-  const isReady = coverageScore >= 0.6 && wordCount >= 150;
+  // (userTurnCount / wordCount / coveragePct / isReady dropped 2026-04-15 —
+  // coverage-driven UI removed in favour of the adaptive-interviewer model's
+  // conversational readiness signal.)
 
   // ---------------------------------------------------------------------------
   // Auto-scroll on new turns
@@ -252,11 +247,8 @@ export function InterviewPanel() {
       {/* ------------------------------------------------------------------ */}
       {/* 1. Header row                                                        */}
       {/* ------------------------------------------------------------------ */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-border shrink-0">
+      <div className="flex items-center px-5 py-3 border-b border-border shrink-0">
         <span className="label-caps text-foreground">Interview</span>
-        <span className="font-mono text-xs text-muted-foreground">
-          Question {userTurnCount > 0 ? userTurnCount + 1 : 1} of ~7
-        </span>
       </div>
 
       {/* ------------------------------------------------------------------ */}
@@ -281,43 +273,6 @@ export function InterviewPanel() {
           />
         </div>
       </details>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* 2. Coverage progress bar                                            */}
-      {/* ------------------------------------------------------------------ */}
-      <div className="px-5 py-3 border-b border-border shrink-0">
-        <div className="flex items-center gap-3">
-          <div
-            role="progressbar"
-            aria-label="Coverage progress"
-            aria-valuenow={coveragePct}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            className="flex-1 h-1 bg-muted rounded-sm overflow-hidden"
-          >
-            <div
-              className={cn(
-                "h-full transition-all duration-500 rounded-sm",
-                isReady ? "bg-accent" : "bg-warning/70"
-              )}
-              style={{ width: `${coveragePct}%` }}
-            />
-          </div>
-          <span
-            className={cn(
-              "label-caps shrink-0",
-              isReady ? "text-accent" : "text-muted-foreground"
-            )}
-          >
-            Coverage {coveragePct}%
-          </span>
-        </div>
-        {isReady && (
-          <p className="font-mono text-xs text-accent mt-1.5">
-            Ready to assemble.
-          </p>
-        )}
-      </div>
 
       {/* ------------------------------------------------------------------ */}
       {/* 3. Assessment callout                                               */}
@@ -400,18 +355,6 @@ export function InterviewPanel() {
       {/* 6 + 7. Input area + voice placeholder                               */}
       {/* ------------------------------------------------------------------ */}
       <div className="px-5 py-4 border-t border-border shrink-0 flex flex-col gap-2">
-        {/* Ready-to-assemble banner — model has decided it has enough material.
-            Shown above the input so it's the first thing the user sees on the
-            way to typing more or hitting Assemble. The textarea stays active
-            so the user can still add more if they want. */}
-        {interviewStatus === "ready-to-assemble" && (
-          <div className="rounded-sm border border-accent/40 bg-accent/10 px-3 py-2">
-            <p className="font-mono text-xs text-accent">
-              Ready to assemble — click <span className="font-semibold">Assemble →</span> below, or add anything else you'd like to mention.
-            </p>
-          </div>
-        )}
-
         {/* Inline API key error */}
         {inlineError && (
           <p className="font-mono text-xs text-destructive">{inlineError}</p>

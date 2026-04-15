@@ -25,17 +25,29 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
   const [value, setValue] = React.useState<string>("")
   const [revealed, setRevealed] = React.useState(false)
+  const [validationError, setValidationError] = React.useState<string | null>(null)
 
   // Seed input from store each time the dialog opens
   React.useEffect(() => {
     if (open) {
       setValue(apiKey ?? "")
       setRevealed(false)
+      setValidationError(null)
     }
   }, [open, apiKey])
 
   function handleSave() {
     const trimmed = value.trim()
+    // Empty is allowed (clears the key). Non-empty must match Anthropic
+    // key format — silent acceptance of a bad key turns into a confusing
+    // error later when assembly tries to construct the client (see
+    // post-mvp-backlog.md #1).
+    if (trimmed.length > 0 && !trimmed.startsWith("sk-ant-")) {
+      setValidationError(
+        "Anthropic API keys start with 'sk-ant-'. Get one at https://console.anthropic.com/settings/keys."
+      )
+      return
+    }
     setApiKey(trimmed.length > 0 ? trimmed : null)
     onOpenChange(false)
   }
@@ -72,15 +84,19 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               id="api-key-input"
               type={revealed ? "text" : "password"}
               value={value}
-              onChange={(e) => setValue(e.target.value)}
+              onChange={(e) => {
+                setValue(e.target.value)
+                if (validationError) setValidationError(null)
+              }}
               placeholder="sk-ant-api03-..."
               autoComplete="off"
               spellCheck={false}
               className={cn(
-                "w-full rounded-sm border border-border bg-background px-3 py-2 pr-10",
+                "w-full rounded-sm border bg-background px-3 py-2 pr-10",
                 "font-mono text-sm text-foreground placeholder:text-muted-foreground",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                "disabled:cursor-not-allowed disabled:opacity-50"
+                "disabled:cursor-not-allowed disabled:opacity-50",
+                validationError ? "border-destructive" : "border-border"
               )}
             />
             <button
@@ -100,6 +116,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               )}
             </button>
           </div>
+
+          {/* Inline validation error */}
+          {validationError && (
+            <p className="font-mono text-xs text-destructive">{validationError}</p>
+          )}
 
           {/* Disclosure block */}
           <div className="rounded-sm border border-border bg-muted/40 px-3 py-3">

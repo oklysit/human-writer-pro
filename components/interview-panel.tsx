@@ -271,12 +271,9 @@ export function InterviewPanel() {
 
   return (
     <div className="flex flex-col h-full bg-card border-r border-border">
-      {/* ------------------------------------------------------------------ */}
-      {/* 1. Header row                                                        */}
-      {/* ------------------------------------------------------------------ */}
-      <div className="flex items-center px-5 py-3 border-b border-border shrink-0">
-        <span className="label-caps text-foreground">Interview</span>
-      </div>
+      {/* Header removed 2026-04-15 — "Interview" label was redundant with
+          the app's whole purpose. The chat metaphor works better without
+          it. Context panel + turn history read as one unified flow. */}
 
       {/* ------------------------------------------------------------------ */}
       {/* 1b. Context — primary panel, always visible                         */}
@@ -360,18 +357,29 @@ export function InterviewPanel() {
           </p>
         </div>
       )}
-      {lastAssessment === null && turns.length === 0 && !loading && (
-        <div className="px-5 py-2 border-b border-border shrink-0">
-          <p className="font-mono text-xs text-muted-foreground">
-            Interview starting…
-          </p>
-        </div>
-      )}
-
       {/* ------------------------------------------------------------------ */}
       {/* 4 + 5. Turn history (scrollable) + current question                */}
       {/* ------------------------------------------------------------------ */}
       <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4 min-h-0">
+        {/* Pre-interview greeting — styled like an assistant turn so the
+            pane reads as a chat thread from the first glance. Replaces
+            the old "Interview starting…" placeholder. */}
+        {turns.length === 0 && !loading && (
+          <div className="pl-3 py-1 border-l-2 border-warning/40">
+            <p className="font-body text-sm text-muted-foreground leading-relaxed">
+              {contextNotes.trim() ? (
+                <>
+                  Got your context. Click <strong className="text-foreground font-semibold">Start Interview</strong> when you're ready and I'll ask you a few questions about it. Your answers become the raw material I stitch the draft from — the more specific you get, the more of your voice lands in the output.
+                </>
+              ) : (
+                <>
+                  Welcome to Human Writer Pro. What are you writing? Paste the context above (job posting, assignment, reference doc) or upload a file — then click <strong className="text-foreground font-semibold">Start Interview</strong> and I'll ask questions to surface the material.
+                </>
+              )}
+            </p>
+          </div>
+        )}
+
         {turns.map((turn, i) => {
           const isAssistant = turn.role === "assistant";
           const isLast = i === turns.length - 1;
@@ -419,15 +427,10 @@ export function InterviewPanel() {
       {/* 6 + 7. Pre-interview Start button OR active input area              */}
       {/* ------------------------------------------------------------------ */}
       {turns.length === 0 ? (
-        // Pre-interview: Start button instead of input. Prompts the user to
-        // fill Context first, then click Start. Mode selection alone does
+        // Pre-interview: Start button only (the greeting in the turn-history
+        // area above already explains the flow). Mode selection alone does
         // NOT auto-fire the first question — context-first workflow.
-        <div className="px-5 py-6 border-t border-border shrink-0 flex flex-col items-center gap-3">
-          <p className="font-body text-sm text-muted-foreground text-center max-w-xs">
-            {contextNotes.trim()
-              ? "Context looks good. Click below to start the interview."
-              : "Add context above (required). Paste text, or upload .md / .txt / .pdf / .docx. The interviewer reads this to ask the right questions."}
-          </p>
+        <div className="px-5 py-4 border-t border-border shrink-0 flex flex-col items-center gap-2">
           <Button
             variant="default"
             size="sm"

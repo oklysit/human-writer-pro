@@ -8,7 +8,10 @@ describe("useSessionStore", () => {
 
   it("has sensible defaults", () => {
     const state = useSessionStore.getState();
-    expect(state.mode).toBe(null);
+    // 2026-04-15: mode default changed from null to "cover-letter" when
+    // the Writing-Mode dropdown was removed. Context is now the user-facing
+    // gate; mode stays hardcoded.
+    expect(state.mode).toBe("cover-letter");
     expect(state.apiKey).toBe(null);
     expect(state.interview.turns).toEqual([]);
     expect(state.output).toBe("");

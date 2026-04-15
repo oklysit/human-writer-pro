@@ -3,7 +3,6 @@
 import * as React from "react";
 import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ModeSelector } from "@/components/mode-selector";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { InterviewPanel } from "@/components/interview-panel";
 import { PreviewPanel } from "@/components/preview-panel";
@@ -167,10 +166,8 @@ export default function HomePage() {
           Human Writer Pro
         </span>
 
-        {/* Center: mode selector */}
-        <div className="w-[220px]">
-          <ModeSelector />
-        </div>
+        {/* Center: reserved (mode picker removed 2026-04-15 — context drives what to write) */}
+        <div className="w-[220px]" />
 
         {/* Right: settings button */}
         <Button

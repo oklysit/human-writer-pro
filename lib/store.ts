@@ -3,6 +3,17 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import type { VRResult } from "./verbatim-ratio";
 import { stripInterviewQuestions, type AssessmentLevel } from "./coverage";
 
+/**
+ * 2026-04-15: the user-facing "Writing Mode" dropdown was removed. Context
+ * (free-form text + uploaded files) now drives what the interviewer probes
+ * for. The `mode` state stays hardcoded to "cover-letter" in initialState
+ * so the existing mode-aware code paths (interview engine loading
+ * `lib/prompts/modes/cover-letter.ts`) keep working without churn.
+ *
+ * The `Mode` union is kept at its 5-literal shape so the MODES record +
+ * existing tests stay valid. The non-cover-letter mode files are orphaned
+ * — future work can delete them when mode-agnostic assembly lands.
+ */
 export type Mode = "essay" | "email" | "blog" | "cover-letter" | "free-form";
 
 export type InterviewTurn = {
@@ -63,7 +74,7 @@ type AppActions = {
 
 const initialState: AppState = {
   apiKey: null,
-  mode: null,
+  mode: "cover-letter",
   contextNotes: "",
   interview: {
     turns: [],

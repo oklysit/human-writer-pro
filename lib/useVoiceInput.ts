@@ -97,10 +97,17 @@ export function useVoiceInput(opts: UseVoiceInputOptions = {}): UseVoiceInputRet
   // a fresh start() call could reset it — corrupting state when the mic was
   // left running across turn submits (2026-04-15 fix).
   const accumulatedFinalRef = React.useRef("");
+  // True while the caller wants recognition to stay alive. Flipped false in
+  // stop() and on terminal errors (permission/device). Chrome auto-ends the
+  // Web Speech session after ~15-20s of silence even with continuous=true;
+  // without re-arming it here the mic drops mid-interview and the user has
+  // to tap it again. Auto-restart fires in onend when this is still true.
+  const shouldRestartRef = React.useRef(false);
 
   // Cleanup on unmount
   React.useEffect(() => {
     return () => {
+      shouldRestartRef.current = false;
       if (recognitionRef.current) {
         // Null out handlers first to prevent state updates after unmount
         recognitionRef.current.onresult = null;
@@ -140,14 +147,21 @@ export function useVoiceInput(opts: UseVoiceInputOptions = {}): UseVoiceInputRet
     };
 
     recognition.onerror = (event: ISpeechRecognitionErrorEvent) => {
+      // "no-speech" is expected during normal pauses — onend will auto-restart
+      // silently. Don't surface it as an error; the mic button will stay lit.
+      if (event.error === "no-speech") {
+        return;
+      }
+
+      // Any other error is terminal for this session — prevent onend from
+      // restarting into a failure loop.
+      shouldRestartRef.current = false;
+
       let message: string;
       switch (event.error) {
         case "not-allowed":
         case "permission-denied":
           message = "Microphone access denied. Check your browser permissions.";
-          break;
-        case "no-speech":
-          message = "No speech detected. Try again.";
           break;
         case "network":
           message = "Network error during voice recognition. Check your connection.";
@@ -166,6 +180,17 @@ export function useVoiceInput(opts: UseVoiceInputOptions = {}): UseVoiceInputRet
     };
 
     recognition.onend = () => {
+      // Chrome auto-ends the Web Speech session after ~15-20s of silence even
+      // with continuous=true. If the caller still wants the mic live, restart
+      // the same instance rather than bubbling the end up to the UI.
+      if (shouldRestartRef.current) {
+        try {
+          recognition.start();
+          return;
+        } catch {
+          // Fall through to cleanup if restart fails (e.g. instance is dead).
+        }
+      }
       setRecording(false);
       setInterimTranscript("");
       startingRef.current = false;
@@ -174,6 +199,7 @@ export function useVoiceInput(opts: UseVoiceInputOptions = {}): UseVoiceInputRet
 
     recognitionRef.current = recognition;
     startingRef.current = true;
+    shouldRestartRef.current = true;
     setError(null);
     setFinalTranscript("");
     setInterimTranscript("");
@@ -185,6 +211,9 @@ export function useVoiceInput(opts: UseVoiceInputOptions = {}): UseVoiceInputRet
 
   const stop = React.useCallback(() => {
     if (!recording || !recognitionRef.current) return;
+    // Disable auto-restart BEFORE stopping the recognition instance. Otherwise
+    // onend would re-arm the mic against the user's intent.
+    shouldRestartRef.current = false;
     // Null handlers FIRST so any chunks already in the recognition pipeline
     // (typically the last few words still being processed when the user hit
     // submit) cannot fire onresult and re-populate the textarea after the

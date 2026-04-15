@@ -59,9 +59,19 @@ export default function HomePage() {
     () => detectWritingMode(combinedContext),
     [combinedContext]
   );
-  const detectedModeLabel = combinedContext.trim().length > 0
-    ? `Mode: ${detectedMode === "cover-letter" ? "Cover Letter" : detectedMode === "free-form" ? "Free-form" : detectedMode[0].toUpperCase() + detectedMode.slice(1)}`
-    : null;
+  // Chip surfaces the REGIME that will actually run at assemble-time, not
+  // the 5-way detected mode. detectWritingMode() returns
+  // cover-letter|email|essay|blog|free-form for future branching, but today
+  // assemblyRegime() collapses everything to cl|generic — those are the only
+  // two prompts assemble.ts switches on. Showing the fine-grained mode
+  // implied behavior differences that don't exist yet.
+  const detectedRegime = React.useMemo(
+    () => (combinedContext.trim().length > 0 ? assemblyRegime(detectedMode) : null),
+    [combinedContext, detectedMode]
+  );
+  const detectedModeLabel = detectedRegime === null
+    ? null
+    : `Mode: ${detectedRegime === "cl" ? "Cover Letter" : "Generic Write"}`;
 
   // ---------------------------------------------------------------------------
   // EditChat trigger removed in MVP. Whole-output regenerate-with-feedback
@@ -293,7 +303,7 @@ export default function HomePage() {
                 htmlFor="target-words"
                 className="label-caps text-muted-foreground shrink-0"
               >
-                Target
+                Target Word Count
               </label>
               <input
                 id="target-words"
@@ -318,7 +328,7 @@ export default function HomePage() {
                 )}
               />
               <span className="font-mono text-[0.625rem] text-muted-foreground/70 uppercase tracking-wider">
-                words (blank = auto)
+                (blank = auto)
               </span>
               {detectedModeLabel && (
                 <span

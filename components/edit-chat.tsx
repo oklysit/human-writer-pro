@@ -16,11 +16,13 @@
  */
 
 import * as React from "react";
+import { Mic, MicOff, X } from "lucide-react";
 import { useSessionStore } from "@/lib/store";
 import { askSocraticEditQuestion, localizedRestitch } from "@/lib/interview-engine";
 import { getMode } from "@/lib/prompts/modes";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useVoiceInput, type UseVoiceInputReturn } from "@/lib/useVoiceInput";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -46,6 +48,57 @@ export type EditChatProps = {
 };
 
 // ---------------------------------------------------------------------------
+// MicButton — small reusable trigger that mirrors the InterviewPanel mic UI
+// ---------------------------------------------------------------------------
+
+function MicButton({
+  voice,
+  disabled,
+}: {
+  voice: UseVoiceInputReturn;
+  disabled?: boolean;
+}): JSX.Element {
+  if (!voice.supported) {
+    return (
+      <button
+        type="button"
+        disabled
+        aria-label="Voice input unavailable"
+        title="Voice input not supported in this browser. Chrome or Edge recommended."
+        className={cn(
+          "flex items-center justify-center h-9 w-9 rounded-sm border border-border",
+          "text-muted-foreground cursor-not-allowed opacity-40"
+        )}
+      >
+        <Mic className="h-4 w-4" aria-hidden />
+      </button>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => (voice.recording ? voice.stop() : voice.start())}
+      disabled={disabled}
+      aria-label={voice.recording ? "Stop voice input" : "Start voice input"}
+      title={voice.recording ? "Stop recording" : "Start voice input"}
+      className={cn(
+        "flex items-center justify-center h-9 w-9 rounded-sm border border-border transition-colors",
+        voice.recording
+          ? "text-accent border-accent animate-pulse"
+          : "text-muted-foreground hover:text-foreground hover:border-foreground",
+        disabled && "opacity-40 cursor-not-allowed"
+      )}
+    >
+      {voice.recording ? (
+        <MicOff className="h-4 w-4" aria-hidden />
+      ) : (
+        <Mic className="h-4 w-4" aria-hidden />
+      )}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -66,6 +119,84 @@ export function EditChat({ selectedParagraph, onClose, className }: EditChatProp
   const [userAnswer, setUserAnswer] = React.useState("");
   const [restitched, setRestitched] = React.useState("");
 
+  // ---- Voice input — separate instances per textarea ----
+  // Two textareas (complaint + answer) live in mutually-exclusive states, but
+  // each gets its own voice hook so the recording state, interim transcript,
+  // and base snapshot stay independent.
+  const voiceComplaint = useVoiceInput({
+    onError: (msg) => setError(msg),
+  });
+  const voiceAnswer = useVoiceInput({
+    onError: (msg) => setError(msg),
+  });
+
+  // Snapshots — capture textarea value at the moment recording starts so
+  // interim/final transcripts can be appended without losing prior text.
+  const complaintBaseRef = React.useRef("");
+  const answerBaseRef = React.useRef("");
+
+  // Snapshot complaint when its recording starts
+  const prevComplaintRecording = React.useRef(false);
+  React.useEffect(() => {
+    if (voiceComplaint.recording && !prevComplaintRecording.current) {
+      complaintBaseRef.current = complaint;
+    }
+    prevComplaintRecording.current = voiceComplaint.recording;
+  });
+
+  // Snapshot answer when its recording starts
+  const prevAnswerRecording = React.useRef(false);
+  React.useEffect(() => {
+    if (voiceAnswer.recording && !prevAnswerRecording.current) {
+      answerBaseRef.current = userAnswer;
+    }
+    prevAnswerRecording.current = voiceAnswer.recording;
+  });
+
+  // Live preview — complaint
+  React.useEffect(() => {
+    if (!voiceComplaint.recording) return;
+    const base = complaintBaseRef.current;
+    const separator = base.length > 0 && !base.endsWith(" ") ? " " : "";
+    const preview = voiceComplaint.finalTranscript + voiceComplaint.interimTranscript;
+    if (preview) {
+      setComplaint(base + separator + preview);
+    }
+  }, [voiceComplaint.recording, voiceComplaint.finalTranscript, voiceComplaint.interimTranscript]);
+
+  // Commit complaint final on stop
+  React.useEffect(() => {
+    if (!voiceComplaint.recording && voiceComplaint.finalTranscript) {
+      const base = complaintBaseRef.current;
+      const separator = base.length > 0 && !base.endsWith(" ") ? " " : "";
+      setComplaint(base + separator + voiceComplaint.finalTranscript);
+      complaintBaseRef.current = "";
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voiceComplaint.recording]);
+
+  // Live preview — answer
+  React.useEffect(() => {
+    if (!voiceAnswer.recording) return;
+    const base = answerBaseRef.current;
+    const separator = base.length > 0 && !base.endsWith(" ") ? " " : "";
+    const preview = voiceAnswer.finalTranscript + voiceAnswer.interimTranscript;
+    if (preview) {
+      setUserAnswer(base + separator + preview);
+    }
+  }, [voiceAnswer.recording, voiceAnswer.finalTranscript, voiceAnswer.interimTranscript]);
+
+  // Commit answer final on stop
+  React.useEffect(() => {
+    if (!voiceAnswer.recording && voiceAnswer.finalTranscript) {
+      const base = answerBaseRef.current;
+      const separator = base.length > 0 && !base.endsWith(" ") ? " " : "";
+      setUserAnswer(base + separator + voiceAnswer.finalTranscript);
+      answerBaseRef.current = "";
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voiceAnswer.recording]);
+
   // Sync hidden / intro with selectedParagraph prop
   React.useEffect(() => {
     if (selectedParagraph !== null) {
@@ -81,6 +212,33 @@ export function EditChat({ selectedParagraph, onClose, className }: EditChatProp
 
   // ---- Handlers ----
 
+  function handleCancel(): void {
+    // Stop and clear any active voice sessions so they don't leak state into
+    // the next time the panel opens (different paragraph).
+    voiceComplaint.stop();
+    voiceComplaint.reset();
+    voiceAnswer.stop();
+    voiceAnswer.reset();
+    setChatState("hidden");
+    onClose();
+  }
+
+  // Escape closes the panel from any non-terminal state.
+  React.useEffect(() => {
+    const isOpen =
+      chatState !== "hidden" && chatState !== "applied" && chatState !== "rejected";
+    if (!isOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        handleCancel();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatState]);
+
   function handleError(message: string): void {
     setError(message);
     toast({ title: "Edit failed", description: message, variant: "destructive" });
@@ -91,6 +249,8 @@ export function EditChat({ selectedParagraph, onClose, className }: EditChatProp
   async function handleSendComplaint(): Promise<void> {
     if (!complaint.trim() || !selectedParagraph || !apiKey) return;
 
+    voiceComplaint.stop();
+    voiceComplaint.reset();
     setChatState("asking");
     try {
       const question = await askSocraticEditQuestion({
@@ -108,6 +268,8 @@ export function EditChat({ selectedParagraph, onClose, className }: EditChatProp
   async function handleSendAnswer(): Promise<void> {
     if (!userAnswer.trim() || !selectedParagraph || !apiKey || !mode) return;
 
+    voiceAnswer.stop();
+    voiceAnswer.reset();
     setChatState("restitching");
     const modeConfig = getMode(mode);
     try {
@@ -169,6 +331,23 @@ export function EditChat({ selectedParagraph, onClose, className }: EditChatProp
         className
       )}
     >
+      {/* Header — title + close (X). Always visible while panel is open. */}
+      <div className="flex items-center justify-between">
+        <span className="label-caps text-foreground">Edit paragraph</span>
+        <button
+          type="button"
+          onClick={handleCancel}
+          aria-label="Close edit panel (Esc)"
+          title="Close (Esc)"
+          className={cn(
+            "flex items-center justify-center h-7 w-7 rounded-sm",
+            "text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          )}
+        >
+          <X className="h-4 w-4" aria-hidden />
+        </button>
+      </div>
+
       {/* Selected paragraph context */}
       {selectedParagraph && (
         <div className="flex flex-col gap-1">
@@ -195,14 +374,17 @@ export function EditChat({ selectedParagraph, onClose, className }: EditChatProp
           />
           <div className="flex items-center justify-between">
             <span className="font-mono text-xs text-muted-foreground">Cmd+Enter to send</span>
-            <Button
-              size="sm"
-              onClick={handleSendComplaint}
-              disabled={!complaint.trim()}
-              className="font-mono text-xs uppercase tracking-wider"
-            >
-              Send
-            </Button>
+            <div className="flex items-center gap-2">
+              <MicButton voice={voiceComplaint} />
+              <Button
+                size="sm"
+                onClick={handleSendComplaint}
+                disabled={!complaint.trim()}
+                className="font-mono text-xs uppercase tracking-wider"
+              >
+                Send
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -233,14 +415,17 @@ export function EditChat({ selectedParagraph, onClose, className }: EditChatProp
           />
           <div className="flex items-center justify-between">
             <span className="font-mono text-xs text-muted-foreground">Cmd+Enter to send</span>
-            <Button
-              size="sm"
-              onClick={handleSendAnswer}
-              disabled={!userAnswer.trim()}
-              className="font-mono text-xs uppercase tracking-wider"
-            >
-              Send
-            </Button>
+            <div className="flex items-center gap-2">
+              <MicButton voice={voiceAnswer} />
+              <Button
+                size="sm"
+                onClick={handleSendAnswer}
+                disabled={!userAnswer.trim()}
+                className="font-mono text-xs uppercase tracking-wider"
+              >
+                Send
+              </Button>
+            </div>
           </div>
         </div>
       )}

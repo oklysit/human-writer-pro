@@ -158,15 +158,15 @@ Infer the appropriate genre, structure, and length from context:
 
 Verbatim-anchoring rules (the load-bearing ones):
 
-1. **Lift in sequences, not single words.** When using the user's phrasing, lift 3+ consecutive words at a time. Single-word borrowings don't count as verbatim stitching — they read as paraphrase. Lift a clause, a sentence fragment, or a full sentence directly.
+1. **Heavy verbatim stitching.** Anchor the draft on the user's actual phrasing. Most of the distinctive content — the specifics, the examples, the moments — should be lifted rather than paraphrased. Connective prose is yours; load-bearing content is theirs.
 
-2. **Target ~25% verbatim.** Roughly 1 in 4 words in your output should trace to an exact 3+-word sequence in the raw interview. That's substantial anchoring without being clunky. Less than 15% reads as pure paraphrase (generic LLM prose); more than 40% reads as awkward dictation. Aim for ~25%.
+2. **Minimum 3 consecutive words when lifting.** When using the user's phrasing, lift 3+ consecutive words at a time. Single-word borrowings don't count as verbatim stitching — they read as paraphrase. Lift a clause, a sentence fragment, or a full sentence directly. No specific target percentage — overshoot if the raw material is rich, undershoot if it's thin, but never resort to single-word borrowings to dodge the rule.
 
-3. **Use connective prose for polish, not padding.** Around the verbatim anchors, write clean connective sentences in neutral register. These are where the writing breathes — don't stuff them with filler.
+3. **Use connective prose for polish, not padding.** Around the verbatim anchors, write clean connective sentences in neutral register. These are where the writing breathes — keep them short, don't stuff them with filler.
 
 4. **Remove obvious transcription filler.** Strip "you know", "kinda", "sort of", "I mean", "like" (as a filler word), repeated false starts, and conversational stalls. The output should read polished, NOT like a raw dictation transcript. The verbatim anchors carry the user's voice — they don't need filler to do it.
 
-5. **Keep deliberate hedges and distinctive phrasings.** "If I'm being honest", "the way I think about it", "what stuck with me", "this is where it gets interesting" — these are voice, not filler. Keep them if the user used them.
+5. **Keep deliberate hedges and distinctive phrasings.** "If I'm being honest", "the way I think about it", "what stuck with me", "this is where it gets interesting" — these are voice, not filler. Keep them when the user used them.
 
 Structural rules (genre-agnostic):
 
@@ -188,7 +188,7 @@ Procedure — follow for each paragraph / section / unit:
 2. Lift them as 3+ word sequences into the draft. Preserve phrasing even if slightly rough.
 3. Write connective sentences between the verbatim anchors in clean, neutral register. Keep these short — they're glue, not content.
 4. Filter out transcription filler as you go. The verbatim anchors stay; the "you know"s get dropped.
-5. After the unit is drafted, verify: ~25% of your word count should trace to an exact 3+-word sequence in the raw. If you're at 10%, add more verbatim lifts. If you're at 50%, the connective tissue got thin.
+5. After the unit is drafted, verify: every lift is a 3+ word continuous sequence from the raw. If you see single-word borrowings, either expand them to 3+ word lifts or write those sentences as your own connective prose.
 
 Pacing: vary sentence length. Mix short with longer. Break at natural stopping points. Do not merge unrelated clauses with em-dashes or semicolons.`;
 
@@ -206,7 +206,23 @@ export type AssembleOptions = {
    * Defaults to "cl" for backward compat with the initial MVP.
    */
   regime?: "cl" | "generic";
+  /**
+   * Explicit word-count target. null/undefined = let the model infer
+   * from genre + context. When set, an override directive is appended
+   * to the system prompt so the model honors it over default ranges.
+   */
+  targetWords?: number | null;
 };
+
+/**
+ * If the user set an explicit word-count target, produce a short
+ * override directive to append to the system prompt. Overrides default
+ * word ranges baked into either prompt regime.
+ */
+function buildTargetWordsDirective(targetWords?: number | null): string {
+  if (!targetWords || targetWords <= 0) return "";
+  return `\n\n**User override — target word count: ~${targetWords} words.** Honor this above any default range in the system prompt. A tolerance of ±15% is fine; beyond that, trim or expand to land in range.`;
+}
 
 /**
  * Thin helper that wraps streamClaude with the band-35 assembly prompt.
@@ -219,16 +235,32 @@ export type AssembleOptions = {
  * the fact. Streaming tokens already in-flight will be swallowed.
  */
 export function assemble(options: AssembleOptions): { cancel: () => void } {
-  const { apiKey, rawInterview, onToken, onComplete, onError, regime = "cl" } = options;
+  const {
+    apiKey,
+    rawInterview,
+    onToken,
+    onComplete,
+    onError,
+    regime = "cl",
+    targetWords,
+  } = options;
 
   let cancelled = false;
 
   const client = createAnthropicClient(apiKey);
 
-  const systemPrompt = regime === "generic" ? GENERIC_WRITE_SYSTEM_PROMPT : SYSTEM_PROMPT;
+  const basePrompt = regime === "generic" ? GENERIC_WRITE_SYSTEM_PROMPT : SYSTEM_PROMPT;
+  const systemPrompt = basePrompt + buildTargetWordsDirective(targetWords);
+
   // Generic mode may need to accommodate longer outputs (essays, detailed
   // emails, blog posts). CL framework caps around 400-450 words.
-  const maxTokens = regime === "generic" ? 2048 : 1024;
+  // If user targeted a specific word count, bump maxTokens proportionally
+  // (~1.5 tokens per word + overhead) so we don't truncate mid-sentence.
+  const defaultMaxTokens = regime === "generic" ? 2048 : 1024;
+  const maxTokens =
+    targetWords && targetWords > 300
+      ? Math.min(4096, Math.max(defaultMaxTokens, Math.ceil(targetWords * 2)))
+      : defaultMaxTokens;
 
   streamClaude(
     client,
@@ -276,7 +308,7 @@ export function assemble(options: AssembleOptions): { cancel: () => void } {
  */
 export type AssembleFeedbackMode = "cl" | "generic" | "edit";
 
-export type AssembleWithFeedbackOptions = AssembleOptions & {
+export type AssembleWithFeedbackOptions = Omit<AssembleOptions, "regime"> & {
   /** The previous draft the user is asking to revise. */
   previousOutput: string;
   /** What the user wants changed (typically dictated). */
@@ -330,6 +362,7 @@ export function assembleWithFeedback(options: AssembleWithFeedbackOptions): { ca
     previousOutput,
     feedback,
     mode = "cl",
+    targetWords,
     onToken,
     onComplete,
     onError,
@@ -338,10 +371,11 @@ export function assembleWithFeedback(options: AssembleWithFeedbackOptions): { ca
   let cancelled = false;
   const client = createAnthropicClient(apiKey);
 
-  let systemPrompt: string;
-  if (mode === "edit") systemPrompt = GENERIC_EDIT_SYSTEM_PROMPT;
-  else if (mode === "generic") systemPrompt = GENERIC_WRITE_SYSTEM_PROMPT;
-  else systemPrompt = SYSTEM_PROMPT; // "cl"
+  let basePrompt: string;
+  if (mode === "edit") basePrompt = GENERIC_EDIT_SYSTEM_PROMPT;
+  else if (mode === "generic") basePrompt = GENERIC_WRITE_SYSTEM_PROMPT;
+  else basePrompt = SYSTEM_PROMPT; // "cl"
+  const systemPrompt = basePrompt + buildTargetWordsDirective(targetWords);
 
   const revisionInstruction =
     mode === "edit"

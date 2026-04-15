@@ -32,6 +32,32 @@ export default function HomePage() {
   const [settingsOpen, setSettingsOpen] = React.useState(false);
 
   // ---------------------------------------------------------------------------
+  // Target-words local draft — the input shows an empty string when the store
+  // has null (auto-infer) and a number otherwise. Local draft state avoids
+  // forcing the user to see "0" when they clear the field.
+  // ---------------------------------------------------------------------------
+  const targetWordsStored = useSessionStore((s) => s.targetWords);
+  const [targetWordsDraft, setTargetWordsDraft] = React.useState<string>(
+    targetWordsStored !== null ? String(targetWordsStored) : ""
+  );
+  React.useEffect(() => {
+    setTargetWordsDraft(targetWordsStored !== null ? String(targetWordsStored) : "");
+  }, [targetWordsStored]);
+
+  // ---------------------------------------------------------------------------
+  // Detected writing mode — recomputed live from contextNotes so the label
+  // next to the Assemble button shows the user which regime will fire.
+  // ---------------------------------------------------------------------------
+  const contextNotes = useSessionStore((s) => s.contextNotes);
+  const detectedMode = React.useMemo(
+    () => detectWritingMode(contextNotes),
+    [contextNotes]
+  );
+  const detectedModeLabel = contextNotes.trim().length > 0
+    ? `Mode: ${detectedMode === "cover-letter" ? "Cover Letter" : detectedMode === "free-form" ? "Free-form" : detectedMode[0].toUpperCase() + detectedMode.slice(1)}`
+    : null;
+
+  // ---------------------------------------------------------------------------
   // EditChat trigger removed in MVP. Whole-output regenerate-with-feedback
   // (in PreviewPanel) handles refinement; paragraph-level Edit Chat ships
   // in the codebase but no UI surface invokes it. See
@@ -51,6 +77,7 @@ export default function HomePage() {
     const rawInterview = state.interview.rawTranscript;
     const detectedMode = detectWritingMode(state.contextNotes);
     const regime = assemblyRegime(detectedMode);
+    const targetWords = state.targetWords;
 
     // Cancel any in-flight stream
     cancelRef.current?.();
@@ -63,6 +90,7 @@ export default function HomePage() {
       apiKey,
       rawInterview,
       regime,
+      targetWords,
       onToken: (delta) => {
         const current = useSessionStore.getState().output;
         useSessionStore.getState().setOutput(current + delta);
@@ -102,6 +130,7 @@ export default function HomePage() {
     const rawInterview = state.interview.rawTranscript;
     const detectedMode = detectWritingMode(state.contextNotes);
     const regime = assemblyRegime(detectedMode);
+    const targetWords = state.targetWords;
 
     cancelRef.current?.();
 
@@ -113,6 +142,7 @@ export default function HomePage() {
       apiKey,
       rawInterview,
       regime,
+      targetWords,
       onToken: (delta) => {
         const current = useSessionStore.getState().output;
         useSessionStore.getState().setOutput(current + delta);
@@ -177,6 +207,7 @@ export default function HomePage() {
       previousOutput,
       feedback,
       mode: feedbackMode,
+      targetWords: state.targetWords,
       onToken: (delta) => {
         const current = useSessionStore.getState().output;
         useSessionStore.getState().setOutput(current + delta);
@@ -246,8 +277,52 @@ export default function HomePage() {
             <InterviewPanel />
           </div>
 
-          {/* Assemble button — docked at bottom of left column */}
-          <div className="shrink-0 px-5 py-3 border-t border-r border-border bg-card">
+          {/* Assemble dock — target-words input + button. Target is
+              optional; blank/zero lets the model infer from genre +
+              context. Passed through handleAssemble and
+              handleRegenerateWithFeedback (shared via store.targetWords). */}
+          <div className="shrink-0 px-5 py-3 border-t border-r border-border bg-card flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor="target-words"
+                className="label-caps text-muted-foreground shrink-0"
+              >
+                Target
+              </label>
+              <input
+                id="target-words"
+                type="number"
+                min={50}
+                max={5000}
+                step={50}
+                value={targetWordsDraft}
+                placeholder="auto"
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  setTargetWordsDraft(raw);
+                  const n = parseInt(raw, 10);
+                  useSessionStore.getState().setTargetWords(
+                    Number.isFinite(n) && n > 0 ? n : null
+                  );
+                }}
+                className={cn(
+                  "w-20 rounded-sm border border-border bg-background px-2 py-1",
+                  "font-mono text-xs text-foreground placeholder:text-muted-foreground",
+                  "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                )}
+              />
+              <span className="font-mono text-[0.625rem] text-muted-foreground/70 uppercase tracking-wider">
+                words (blank = auto)
+              </span>
+              {detectedModeLabel && (
+                <span
+                  className="ml-auto font-mono text-[0.625rem] text-accent uppercase tracking-wider"
+                  title="Detected writing mode — edit context to override"
+                >
+                  {detectedModeLabel}
+                </span>
+              )}
+            </div>
             <Button
               variant="default"
               size="sm"

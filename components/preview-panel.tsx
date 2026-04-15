@@ -265,12 +265,18 @@ export function PreviewPanel({
         <div className="flex flex-col gap-3">
           {isGenerating ? (
             <>
-              {/* Thin pulsing progress bar */}
+              {/* Chat-style "Assembling…" with pulsing bar. Sits in the
+                  empty-state branch that fires when output is cleared
+                  (initial assemble) and when regenerate clears output
+                  before streaming back in. */}
+              <p className="font-body text-base text-foreground italic animate-pulse">
+                Assembling&hellip;
+              </p>
               <div className="h-0.5 w-full overflow-hidden bg-muted">
                 <div className="h-full w-1/2 animate-pulse bg-foreground/30" />
               </div>
-              <p className="font-body text-sm text-muted-foreground italic">
-                Assembling&hellip;
+              <p className="font-body text-xs text-muted-foreground">
+                Typical turnaround 20-60s. The first tokens will appear below as the model streams.
               </p>
             </>
           ) : (
@@ -321,10 +327,17 @@ export function PreviewPanel({
                 {output}
               </ReactMarkdown>
             </div>
-            {/* Streaming cue: pulsing bar at bottom when generating */}
+            {/* Streaming cue: "Streaming…" caption + pulsing bar. Shown
+                once the first tokens arrive and the output panel has
+                content but the stream is still landing. */}
             {isGenerating && (
-              <div className="mt-2 h-0.5 w-full overflow-hidden bg-muted">
-                <div className="h-full w-1/2 animate-pulse bg-foreground/30" />
+              <div className="mt-2 flex flex-col gap-1">
+                <p className="font-body text-xs text-muted-foreground italic">
+                  Streaming&hellip;
+                </p>
+                <div className="h-0.5 w-full overflow-hidden bg-muted">
+                  <div className="h-full w-1/2 animate-pulse bg-foreground/30" />
+                </div>
               </div>
             )}
           </div>

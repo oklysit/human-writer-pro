@@ -151,7 +151,7 @@ function parseArgs(): { testsGreen: number | null } {
 //   rewritten for Tailwind v3): 25h
 // - Regression pipeline (5 real fixtures, k=3 runner, Sonnet judge, baseline
 //   comparator, GPTZero client, Node-side AI-ism extraction): 40h
-// - 146 tests with TDD discipline: 25h (writing + verifying + fixing)
+// - 127 tests with TDD discipline: 25h (writing + verifying + fixing)
 // - Written exhibits (README, MOJO-SETUP, decisions log, pair-review,
 //   future-experiments, VR validation pilot): 15h
 // - Build + infra (CSP, error boundaries, NODE_ENV harness fix, tsx setup,
@@ -160,14 +160,25 @@ function parseArgs(): { testsGreen: number | null } {
 // - Prompt engineering (GOLDEN_DATASET port + 5 mode prompts + Socratic
 //   interview prompt + assembly prompt + edit prompts): 20h
 // - VR validation pilot (54-variant pre-registered experiment): 30h
+// - Day 5 (2026-04-15) additions for MVP submission:
+//   * v4 framework content port + v4.1 calibration (cover-letter + assembler
+//     prompts; k=3 verification + GPTZero pass-rate analysis): 8h
+//   * Regenerate-with-voice-feedback workflow (3-turn assemble + cl/edit
+//     mode routing + store outputSource tracking + UI panel with mic): 15h
+//   * Upload-to-edit flow (preview empty-state + fileImport reuse + setter
+//     + VR-uses-upload-source fix): 5h
+//   * Edit Chat polish (cancel X + Escape + voice on both textareas): 6h
+//   * UI bundle (Enter-to-send + voice autoscroll + drop cap removal +
+//     inline API key validation): 6h
+//   * README submission rewrite + MOJO-SETUP cross-reference: 8h
 //
-// Total: ~250h senior IC equivalent.
+// Total: ~298h senior IC equivalent.
 //
 // Ranges (adjust if project scope changes):
 const SENIOR_IC_HOURS = {
-  low: 200,   // conservative — excludes pilot work + over-counts AI speedup
-  mid: 250,   // midpoint — fair professional estimate
-  high: 300,  // generous — counts team-equivalent hours (designer + FE + ML + QA + writer)
+  low: 240,   // conservative — excludes pilot work + over-counts AI speedup
+  mid: 295,   // midpoint — fair professional estimate
+  high: 350,  // generous — counts team-equivalent hours (designer + FE + ML + QA + writer)
 };
 
 // ── Report builder ────────────────────────────────────────────────────────────

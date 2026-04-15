@@ -33,6 +33,25 @@ export type LastAssessment = {
   reasoning: string;
 } | null;
 
+/**
+ * Uploaded file metadata + extracted text, rendered as a chip in the
+ * Context dock instead of inlined into the textarea (UAT 2026-04-15).
+ * Combined with `contextNotes` only at the moment the interviewer or
+ * assembler reads it (see lib/combineContext.ts).
+ */
+export type AttachedFile = {
+  /** Stable id for React keys + removal */
+  id: string;
+  /** Display name (original filename) */
+  name: string;
+  /** Extension shown in the chip badge */
+  ext: ".md" | ".txt" | ".pdf" | ".docx";
+  /** Original file size in bytes — for chip display */
+  size: number;
+  /** Extracted text content fed into combined context */
+  content: string;
+};
+
 export type AppState = {
   apiKey: string | null;
   mode: Mode | null;
@@ -50,6 +69,12 @@ export type AppState = {
     status: "idle" | "asking" | "ready-to-assemble";
     lastAssessment: LastAssessment;
   };
+  /**
+   * Files the user has attached as additional context. Rendered as
+   * chips in the Context dock; combined with contextNotes only when
+   * the interviewer or assembler reads context (via combineContext).
+   */
+  attachedFiles: AttachedFile[];
   output: string;
   /**
    * Where the output came from. "interview" = produced by the assemble call
@@ -103,6 +128,8 @@ type AppActions = {
    */
   setUploadedDraft: (content: string) => void;
   setTargetWords: (n: number | null) => void;
+  attachFile: (file: AttachedFile) => void;
+  removeAttachedFile: (id: string) => void;
   setVRScore: (score: VRResult | null) => void;
   addEdit: (turn: EditTurn) => void;
   setGenerating: (isGen: boolean) => void;
@@ -120,6 +147,7 @@ const initialState: AppState = {
     status: "idle",
     lastAssessment: null,
   },
+  attachedFiles: [],
   output: "",
   outputSource: null,
   uploadedDraftContent: null,
@@ -141,6 +169,7 @@ export const useSessionStore = create<AppState & AppActions>()(
         set({
           mode,
           contextNotes: "",
+          attachedFiles: [],
           interview: { ...initialState.interview },
           output: "",
           outputSource: null,
@@ -204,6 +233,14 @@ export const useSessionStore = create<AppState & AppActions>()(
         }),
 
       setTargetWords: (n) => set({ targetWords: n }),
+
+      attachFile: (file) =>
+        set((state) => ({ attachedFiles: [...state.attachedFiles, file] })),
+
+      removeAttachedFile: (id) =>
+        set((state) => ({
+          attachedFiles: state.attachedFiles.filter((f) => f.id !== id),
+        })),
 
       setVRScore: (score) => set({ vrScore: score }),
 

@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Mic, MicOff, Paperclip } from "lucide-react";
+import { Mic, MicOff, Paperclip, FileText, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useSessionStore } from "@/lib/store";
+import { useSessionStore, type AttachedFile } from "@/lib/store";
 import { askNextQuestion } from "@/lib/interview-engine";
 import { detectWritingMode } from "@/lib/detectWritingMode";
 import { parseTranscript } from "@/lib/parseTranscript";
+import { combineContext, formatFileSize } from "@/lib/combineContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useVoiceInput } from "@/lib/useVoiceInput";
@@ -20,10 +21,13 @@ export function InterviewPanel() {
   const apiKey = useSessionStore((s) => s.apiKey);
   const mode = useSessionStore((s) => s.mode);
   const contextNotes = useSessionStore((s) => s.contextNotes);
+  const attachedFiles = useSessionStore((s) => s.attachedFiles);
   const turns = useSessionStore((s) => s.interview.turns);
   const lastAssessment = useSessionStore((s) => s.interview.lastAssessment);
 
   const setContextNotes = useSessionStore((s) => s.setContextNotes);
+  const attachFile = useSessionStore((s) => s.attachFile);
+  const removeAttachedFile = useSessionStore((s) => s.removeAttachedFile);
   const addInterviewTurn = useSessionStore((s) => s.addInterviewTurn);
   const setLastAssessment = useSessionStore((s) => s.setLastAssessment);
   const setInterviewStatus = useSessionStore((s) => s.setInterviewStatus);
@@ -187,13 +191,14 @@ export function InterviewPanel() {
   // tells it.
   async function kickoff() {
     if (!mode || !apiKey || turns.length > 0 || loading) return;
-    if (!contextNotes.trim()) return;
+    // Combined context = typed + attached file contents. Either alone
+    // is enough to start an interview.
+    const combined = combineContext(contextNotes, attachedFiles);
+    if (!combined.trim()) return;
 
-    // Detect writing mode from context and update the store so the
-    // interviewer picks the right mode guidance (cover-letter vs email
-    // vs essay etc). Uses `updateMode` (soft update, preserves session
-    // state) — NOT `setMode` which wipes context + turns.
-    const detectedMode = detectWritingMode(contextNotes);
+    // Detect writing mode from combined context (so file content can
+    // also trigger the right mode routing) and update the store.
+    const detectedMode = detectWritingMode(combined);
     if (detectedMode !== mode) {
       useSessionStore.getState().updateMode(detectedMode);
     }
@@ -204,7 +209,7 @@ export function InterviewPanel() {
         mode: detectedMode,
         apiKey,
         history: [],
-        contextNotes,
+        contextNotes: combined,
       });
       setLastAssessment(result.priorAssessment);
       if (result.question.trim().length > 0) {
@@ -262,13 +267,15 @@ export function InterviewPanel() {
 
     // Build history including the just-added user turn
     const currentTurns = useSessionStore.getState().interview.turns;
+    const currentFiles = useSessionStore.getState().attachedFiles;
+    const combined = combineContext(contextNotes, currentFiles);
 
     try {
       const result = await askNextQuestion({
         mode,
         apiKey,
         history: currentTurns,
-        contextNotes,
+        contextNotes: combined,
       });
       setLastAssessment(result.priorAssessment);
       // Skip empty assistant turns (see kickoff above for rationale).
@@ -324,17 +331,19 @@ export function InterviewPanel() {
           setUploadError(`No text extracted from ${file.name}.`);
           continue;
         }
-        const current = useSessionStore.getState().contextNotes;
-        const separator = current.trim().length > 0 ? "\n\n" : "";
-        setContextNotes(
-          `${current}${separator}--- From: ${file.name} ---\n\n${text}`
-        );
-        // Mid-interview feedback: confirm the upload landed. During
-        // pre-interview the char-count next to the paperclip does the
-        // same job; the toast matters most once the interview has
-        // started and the user can't see contextNotes directly.
+        // Push as a chip rather than inlining text into contextNotes.
+        // combineContext() merges chips + typed text only at call-time
+        // (askNextQuestion / detectWritingMode), so the textarea stays
+        // clean while the model still sees the file content.
+        const ext = file.name.toLowerCase().match(/\.(md|txt|pdf|docx)$/)?.[0] as AttachedFile["ext"] | undefined;
+        if (!ext) {
+          setUploadError(`Unsupported extension on ${file.name}.`);
+          continue;
+        }
+        const id = `f_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        attachFile({ id, name: file.name, ext, size: file.size, content: text });
         toast({
-          title: "Context added",
+          title: "Attached",
           description:
             turns.length > 0
               ? `${file.name} — the interviewer will reference it in the next question.`
@@ -481,6 +490,39 @@ export function InterviewPanel() {
           {uploadError && (
             <p className="font-mono text-xs text-destructive">{uploadError}</p>
           )}
+
+          {/* Attached-file chips — render above textarea, like ChatGPT/
+              Claude attachments. Click X to remove from context. */}
+          {attachedFiles.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {attachedFiles.map((f) => (
+                <div
+                  key={f.id}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-sm border border-border bg-muted/40 px-2 py-1",
+                    "font-mono text-[0.6875rem] text-foreground"
+                  )}
+                  title={`${f.name} — ${formatFileSize(f.size)}, ${f.content.length.toLocaleString()} chars extracted`}
+                >
+                  <FileText className="h-3 w-3 text-muted-foreground shrink-0" aria-hidden />
+                  <span className="max-w-[140px] truncate">{f.name}</span>
+                  <span className="text-muted-foreground/70 uppercase tracking-wider text-[0.625rem]">
+                    {f.ext.slice(1)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachedFile(f.id)}
+                    aria-label={`Remove ${f.name}`}
+                    title="Remove attachment"
+                    className="ml-1 text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <X className="h-3 w-3" aria-hidden />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           <label htmlFor="context-input" className="sr-only">
             Context
           </label>
@@ -489,7 +531,7 @@ export function InterviewPanel() {
             ref={contextTextareaRef}
             value={contextNotes}
             onChange={(e) => setContextNotes(e.target.value)}
-            placeholder="Paste a job posting, assignment + rubric, reference doc, or dictate: 'I'm writing an essay on WWII, attaching the rubric'. This reaches only the interviewer — never the final draft."
+            placeholder="Paste a job posting, assignment + rubric, reference doc, or dictate: 'I'm writing an essay on WWII, attaching the rubric'. Attachments above are extracted and added to what the interviewer reads — they never reach the final draft."
             rows={5}
             className="resize-none font-mono text-xs"
           />
@@ -638,6 +680,39 @@ export function InterviewPanel() {
         {/* Inline API key error */}
         {inlineError && (
           <p className="font-mono text-xs text-destructive">{inlineError}</p>
+        )}
+
+        {/* Attached-file chips — render mid-interview too so user sees
+            their attachments + can remove or add via the paperclip
+            below. */}
+        {attachedFiles.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {attachedFiles.map((f) => (
+              <div
+                key={f.id}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-sm border border-border bg-muted/40 px-2 py-1",
+                  "font-mono text-[0.6875rem] text-foreground"
+                )}
+                title={`${f.name} — ${formatFileSize(f.size)}, ${f.content.length.toLocaleString()} chars extracted`}
+              >
+                <FileText className="h-3 w-3 text-muted-foreground shrink-0" aria-hidden />
+                <span className="max-w-[120px] truncate">{f.name}</span>
+                <span className="text-muted-foreground/70 uppercase tracking-wider text-[0.625rem]">
+                  {f.ext.slice(1)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeAttachedFile(f.id)}
+                  aria-label={`Remove ${f.name}`}
+                  title="Remove attachment"
+                  className="ml-1 text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <X className="h-3 w-3" aria-hidden />
+                </button>
+              </div>
+            ))}
+          </div>
         )}
 
         <label htmlFor="interview-input" className="sr-only">

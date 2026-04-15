@@ -349,6 +349,7 @@ export function PreviewPanel({
                 vrResult={vrScore}
                 aiIsmMatches={aiIsmMatches}
                 onRegenerate={() => onRegenerate?.(aiIsmMatches)}
+                onDismiss={() => setAiIsmMatches([])}
               />
 
               {/* Footer actions */}

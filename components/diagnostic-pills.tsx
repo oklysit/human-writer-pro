@@ -28,6 +28,14 @@ type DiagnosticPillsProps = {
   vrResult: VRResult | null
   aiIsmMatches: AIIsmMatch[]
   onRegenerate: () => void
+  /**
+   * Optional. Fires when the user dismisses the current batch of AI-ism
+   * matches — the detector flags patterns that some users' natural voices
+   * happen to hit (no-true-positive problem). Parent should clear local
+   * aiIsmMatches state so the pill + panel disappear until the next
+   * assemble/regenerate triggers a fresh detection.
+   */
+  onDismiss?: () => void
   className?: string
 }
 
@@ -40,6 +48,7 @@ export function DiagnosticPills({
   vrResult,
   aiIsmMatches,
   onRegenerate,
+  onDismiss,
   className,
 }: DiagnosticPillsProps): JSX.Element {
   const [aiIsmOpen, setAiIsmOpen] = React.useState(false)
@@ -132,17 +141,33 @@ export function DiagnosticPills({
                   </li>
                 )}
               </ul>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  onRegenerate()
-                  setAiIsmOpen(false)
-                }}
-                className="self-start font-mono text-xs"
-              >
-                Regenerate avoiding these
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    onRegenerate()
+                    setAiIsmOpen(false)
+                  }}
+                  className="font-mono text-xs"
+                >
+                  Regenerate avoiding these
+                </Button>
+                {onDismiss && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      onDismiss()
+                      setAiIsmOpen(false)
+                    }}
+                    className="font-mono text-xs text-muted-foreground"
+                    title="Clear this batch of flagged AI-isms. The detector pattern-matches phrases that some users' natural voices legitimately use — dismiss to move on without regenerating."
+                  >
+                    Ignore
+                  </Button>
+                )}
+              </div>
             </>
           )}
         </div>

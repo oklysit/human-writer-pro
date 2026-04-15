@@ -135,15 +135,53 @@ function parseArgs(): { testsGreen: number | null } {
 }
 
 // ---------------------------------------------------------------------------
-// Senior IC hours equivalent — project-specific calibration
+// Beswick's actual MoJo Score formula (per the Medium article)
 // ---------------------------------------------------------------------------
 //
-// Beswick's MoJo Score framework: "equivalent senior engineering hours to
-// deliver this work traditionally / your Active Hours." Numerator is
-// subjective but grounded in industry intuition about what a senior IC
-// (without AI assistance) would need for each deliverable.
+//   MoJo Score = (Delivered Value + Decision Value) / Active Hours
 //
-// Breakdown for human-writer-pro (Lawyer.com Model Jockey submission):
+//     Delivered Value = Business Impact × Quality Factor
+//       • Business Impact = TVH (Traditional Value Hours) — real-world
+//         human labor the tool replaces. NOT dev-time-to-build.
+//       • Quality Factor ∈ [0.5, 1.5] via peer + LLM code review.
+//     Decision Value = Σ(investment_avoided × clarity_score) per entry
+//     Active Hours = hands-on-keyboard + eyes-reviewing-output (agent
+//       runtime while AFK excluded).
+//
+// Source: https://medium.com/@rybeswick/measuring-the-magic-the-mojo-score-740f6dbcaa0d
+// Worked example in article: lawclaw.ai, 30 Active Hours, 1,560 TVH, MoJo=52x.
+//
+// Calculation justifications live in /projects/screenshots/hwp-mojo-score-calc.md
+// (TVH benchmarks + sources + three scenarios + Quality Factor evidence).
+
+// TVH scenarios for HWP — projected over a 6-month horizon.
+// A: author's own use (conservative, verifiable)
+// B: 5-user projection on top of A (mid — the "honest ask")
+// C: 50-user projection (high — needs a deployment plan to defend)
+const BUSINESS_IMPACT_TVH = {
+  A: 164,   // own-use only: 100 CLs × 63min + 50 tailored × 20min + 10 assignments × 4.25h
+  B: 376,   // A + (5 users × 42.3h each over 6 months)
+  C: 2279,  // A + (50 users × 42.3h each over 6 months)
+};
+
+// Quality Factor for HWP — self-assessed pending external review.
+// 1.2 justified by: 127 tests passing, TDD discipline, pre-registered n=54
+// pilot with Fisher's p<0.0001 + external reviewer revision, committed
+// decision log with 6 Clarity Scores, commit hygiene (every change
+// explains WHY), handoff docs, BYO-key security architecture. See §5 of
+// hwp-mojo-score-calc.md for full evidence.
+const QUALITY_FACTOR = 1.2;
+
+// ---------------------------------------------------------------------------
+// Senior IC hours — SECONDARY SANITY CHECK (not Beswick's TVH formula)
+// ---------------------------------------------------------------------------
+//
+// "Senior IC hours to build this without AI / your Active Hours" —
+// useful as a build-replacement ratio but NOT the same as Beswick's
+// Business Impact in TVH (which measures downstream user-labor-saved).
+// Kept side-by-side so a reader can see both framings.
+//
+// Breakdown for human-writer-pro:
 // - Next.js 14 SPA with 10+ components, Socratic interview engine, voice
 //   input, Socratic edit chat, streaming assembly, min-input gate, AI-ism
 //   regex gate, inline highlights, diagnostic pills, settings dialog: 80h
@@ -200,19 +238,36 @@ function buildReport(params: {
   );
   const tests = testsGreen ?? 0;
 
-  // Delivered Value = commits × 0.25 + tests × 0.05 + decision_value_sum × 1.0
+  // Delivered Value (placeholder proxy) = commits × 0.25 + tests × 0.05 + DV × 1.0
   const commitsContrib = commits * 0.25;
   const testsContrib = tests * 0.05;
   const dvContrib = decisionValueSum * 1.0;
-  const deliveredValue = commitsContrib + testsContrib + dvContrib;
+  const deliveredValuePlaceholder = commitsContrib + testsContrib + dvContrib;
 
-  // Placeholder MoJo Score (proxy formula)
+  // Placeholder MoJo Score (proxy formula — for internal tracking only)
   const mojoScorePlaceholder =
     totalActiveHours > 0
-      ? (deliveredValue / totalActiveHours).toFixed(2)
+      ? (deliveredValuePlaceholder / totalActiveHours).toFixed(2)
       : "N/A";
 
-  // Senior IC hours MoJo Scores (Beswick's actual framework)
+  // Beswick-aligned MoJo Score — the formula per the Medium article.
+  //   Delivered Value = Business Impact × Quality Factor
+  //   MoJo = (Delivered Value + Decision Value sum) / Active Hours
+  const beswickDelivered = {
+    A: BUSINESS_IMPACT_TVH.A * QUALITY_FACTOR,
+    B: BUSINESS_IMPACT_TVH.B * QUALITY_FACTOR,
+    C: BUSINESS_IMPACT_TVH.C * QUALITY_FACTOR,
+  };
+  const beswickScores =
+    totalActiveHours > 0
+      ? {
+          A: ((beswickDelivered.A + decisionValueSum) / totalActiveHours).toFixed(1),
+          B: ((beswickDelivered.B + decisionValueSum) / totalActiveHours).toFixed(1),
+          C: ((beswickDelivered.C + decisionValueSum) / totalActiveHours).toFixed(1),
+        }
+      : { A: "N/A", B: "N/A", C: "N/A" };
+
+  // Senior IC hours MoJo Scores (reference-only, not Beswick's TVH formula)
   const icScores =
     totalActiveHours > 0
       ? {
@@ -259,23 +314,35 @@ function buildReport(params: {
 | Active Hours | ${totalActiveHours.toFixed(1)} (engaged time only; agent runtime excluded) |
 | Commits on main | ${commits} (total) |
 | Tests green | ${testsDisplay} |
-| Decision Value total | ${dvSumDisplay} |
+| Decision Value total | ${dvSumDisplay} (Σ investment_avoided × clarity_score) |
+| Quality Factor | ${QUALITY_FACTOR} (self-assessed; see hwp-mojo-score-calc.md §5) |
 
-### MoJo Score — dual formula
+### MoJo Score — Beswick framework (primary)
 
-| Framework | Delivered Value | MoJo Score |
+Formula: **MoJo = (Delivered Value + Decision Value) / Active Hours**
+where Delivered Value = Business Impact (TVH) × Quality Factor.
+
+| Scenario | Business Impact (TVH) | Delivered Value | + Decision Value | / Active Hours | **MoJo Score** |
+|---|---|---|---|---|---|
+| A — own-use (conservative) | ${BUSINESS_IMPACT_TVH.A} | ${beswickDelivered.A.toFixed(1)} | +${dvSumDisplay} | / ${totalActiveHours.toFixed(1)} | **${beswickScores.A}x** |
+| B — 5-user projection (mid) | ${BUSINESS_IMPACT_TVH.B} | ${beswickDelivered.B.toFixed(1)} | +${dvSumDisplay} | / ${totalActiveHours.toFixed(1)} | **${beswickScores.B}x** |
+| C — 50-user projection (high) | ${BUSINESS_IMPACT_TVH.C} | ${beswickDelivered.C.toFixed(1)} | +${dvSumDisplay} | / ${totalActiveHours.toFixed(1)} | **${beswickScores.C}x** |
+
+For external citation, **Scenario B (${beswickScores.B}x)** is the honest submission number — own-use + 5-user projection. Scenario C requires a deployment plan to defend. Lawclaw.ai worked example in the article: 52x.
+
+### Secondary — Senior IC hours (build-replacement sanity check)
+
+Not Beswick's formula (his TVH measures downstream user-labor-saved, not dev-time-to-build). Kept side-by-side as a reference ratio.
+
+| Range | Senior IC Hours | MoJo Score |
 |---|---|---|
-| Placeholder (commit/test proxy) | ${deliveredValue.toFixed(2)} | ${mojoScorePlaceholder} |
-| Senior IC hours (low/conservative) | ${SENIOR_IC_HOURS.low}h | **${icScores.low}x** |
-| Senior IC hours (mid/fair) | ${SENIOR_IC_HOURS.mid}h | **${icScores.mid}x** |
-| Senior IC hours (high/generous) | ${SENIOR_IC_HOURS.high}h | **${icScores.high}x** |
+| Conservative | ${SENIOR_IC_HOURS.low}h | ${icScores.low}x |
+| Mid/fair | ${SENIOR_IC_HOURS.mid}h | ${icScores.mid}x |
+| High/generous | ${SENIOR_IC_HOURS.high}h | ${icScores.high}x |
 
-**The senior-IC-hours framework is what Beswick's Part 1 describes**
-and what the Lawyer.com Model Jockey role evaluates against. Citing
-10–50x is common in that framework. The placeholder formula is a
-development-time proxy the script computed before calibrating against
-real senior-IC-hours estimates; it will diverge from the IC-hours
-framework as the project scope grows.
+### Tertiary — Placeholder (internal tracking)
+
+${deliveredValuePlaceholder.toFixed(2)} / ${totalActiveHours.toFixed(1)} = **${mojoScorePlaceholder}x** (commit/test proxy, not suitable for external citation; see Delivered Value Breakdown below).
 
 ## Active Hours Log
 | Date | Hours | Activity |
@@ -285,33 +352,30 @@ ${ahRows || "| — | — | No active entries found |"}
 ## Decision Value Entries
 ${dvItems || "No decision entries found."}
 
-## Delivered Value Breakdown
-> **Note — weights are placeholders.** The formula below is a first-pass heuristic; the correct weighting of commits vs tests vs decisions is a subjective calibration that the user should revisit after ~4 weeks of real use. For external citations (e.g., Lawyer.com MoJo submission), use the **Senior IC hours framework** in the Summary table above — that is what Beswick's Part 1 describes and what evaluators expect.
+## Placeholder breakdown (tertiary, not for citation)
+> **Development-time proxy only.** Use the Beswick framework in the Summary for external citation.
 
 - Commits × 0.25 = ${commitsContribDisplay}
 - Tests × 0.05 = ${testsContribDisplay}
 - Decision Value × 1.0 = ${dvContribDisplay}
-- **TOTAL Delivered Value: ${totalDisplay}**
+- **TOTAL (placeholder): ${totalDisplay}**
 
 ## Notes
 - Active Hours ≠ wall-clock session time. Agent runtime while AFK is excluded (Beswick Part 3).
-- Decision Value = investment_avoided_hours × clarity_score per entry.
-- Delivered Value weights are placeholders; revisit when the user calibrates what "one unit of delivered value" means in this project.
+- Decision Value = Σ (investment_avoided_hours × clarity_score) across all decision entries. Per-entry clarity scores are visible in the Decision Value Entries section above.
+- Business Impact (TVH) + Quality Factor constants live in scripts/mojo-report.ts (\`BUSINESS_IMPACT_TVH\` and \`QUALITY_FACTOR\`) — revise when HWP's use-profile or projected user base materially changes.
+- For external citation (Lawyer.com Mojo take-home), **Scenario B** is the honest submission number. Scenario A is the conservative fallback. Scenario C needs a deployment plan.
 - To record tests automatically, run: \`npm run mojo:report -- --tests=$(npm test 2>&1 | grep -oP '\\d+ passed' | grep -oP '\\d+')\`
 
 ## Calibration notes
 
-The senior-IC-hours numerator is a **one-time calibration** based on
-what each deliverable would take a senior IC to build from scratch
-without AI assistance. Revise \`SENIOR_IC_HOURS\` in \`scripts/mojo-report.ts\`
-if the scope changes materially — adding or removing a deliverable
-(e.g., a new mode, a new eval pipeline component) should shift the
-constants accordingly.
+**BUSINESS_IMPACT_TVH** encodes three scenarios based on per-task savings benchmarks (see /projects/screenshots/hwp-mojo-score-calc.md §4). Revise when academic/email modes ship, actual user base grows past the projection, or per-task benchmarks update with real usage data.
 
-Keep both formulas reported side-by-side to surface divergence. If
-the placeholder score drifts far from the IC-hours score over time,
-that's a signal to revisit the placeholder weights or retire the
-placeholder entirely.
+**QUALITY_FACTOR** starts at 1.2 based on evidence in hwp-mojo-score-calc.md §5. Revise after external code review or production-user-facing bug discovery.
+
+**SENIOR_IC_HOURS** is a build-replacement ratio kept for "how much dev time AI saved me" framing. NOT Beswick's TVH — TVH measures downstream user-labor-saved, not dev-time-to-build.
+
+All three framings reported side-by-side to surface divergence.
 `;
 }
 

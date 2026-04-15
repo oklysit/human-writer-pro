@@ -184,3 +184,127 @@ export function assemble(options: AssembleOptions): { cancel: () => void } {
     },
   };
 }
+
+// ---------------------------------------------------------------------------
+// Regenerate-with-feedback — second iteration of an existing draft
+// ---------------------------------------------------------------------------
+
+/**
+ * "edit" mode is for revising an existing user-provided draft (e.g., they
+ * uploaded a README they want polished). The CL framework prompt would
+ * mangle a long-form document into 5 sections + bullets — wrong for that
+ * use case. Edit-mode uses a generic preserve-and-refine prompt instead.
+ *
+ * "cl" mode (default) keeps the killer-CL framework + verbatim-stitching
+ * prompt for cover-letter regeneration after the interview.
+ */
+export type AssembleFeedbackMode = "cl" | "edit";
+
+export type AssembleWithFeedbackOptions = AssembleOptions & {
+  /** The previous draft the user is asking to revise. */
+  previousOutput: string;
+  /** What the user wants changed (typically dictated). */
+  feedback: string;
+  /** Which prompt regime to use. Defaults to "cl" (CL framework). */
+  mode?: AssembleFeedbackMode;
+};
+
+const GENERIC_EDIT_SYSTEM_PROMPT =
+  `You are revising an existing draft based on user feedback. The original draft is already in the user's voice. Your job is to preserve that voice, the structure, and the verbatim phrasing wherever feedback does not direct otherwise. Only change what the feedback explicitly addresses.
+
+Do NOT impose any new structural framework (no 5-section template, no mandatory bullets, no length caps unless feedback names one). Do NOT add preamble, headings, or commentary about what you changed. Output the revised draft only.
+
+When feedback is short or vague, make minimal edits and preserve the rest verbatim. When feedback is specific (e.g., "rewrite the intro to focus on X"), make those changes faithfully and leave the rest alone.
+
+Pacing and voice rules:
+- Preserve sentence length variance from the original.
+- Keep filler words and natural-speech rhythm if they were in the original.
+- Do not paraphrase sentences the feedback didn't address.`;
+
+/**
+ * Regenerate an existing draft incorporating the user's voice/text feedback.
+ *
+ * Sends a 3-turn conversation to the assembler:
+ *   1. user: rawInterview (or the uploaded source material)
+ *   2. assistant: previousOutput (the draft the user is critiquing)
+ *   3. user: feedback + a "revise the draft above" directive
+ *
+ * Same SYSTEM_PROMPT — the framework + verbatim-stitching rules apply to
+ * the regeneration just as they do to the first assembly. Sonnet uses turn
+ * (2) as context so the revision actually addresses what the user pointed
+ * at, not just what the framework would emit cold.
+ *
+ * For "uploaded draft" use cases (no real interview): pass the upload as
+ * BOTH rawInterview and previousOutput. The assembler then treats the
+ * upload as the source material to stitch from + the prior draft to
+ * incorporate feedback into.
+ */
+export function assembleWithFeedback(options: AssembleWithFeedbackOptions): { cancel: () => void } {
+  const {
+    apiKey,
+    rawInterview,
+    previousOutput,
+    feedback,
+    mode = "cl",
+    onToken,
+    onComplete,
+    onError,
+  } = options;
+
+  let cancelled = false;
+  const client = createAnthropicClient(apiKey);
+
+  const systemPrompt = mode === "edit" ? GENERIC_EDIT_SYSTEM_PROMPT : SYSTEM_PROMPT;
+
+  const revisionInstruction =
+    mode === "edit"
+      ? `The user has reviewed the draft above and given the following feedback. Apply the feedback. Preserve everything else verbatim.
+
+User feedback:
+${feedback.trim()}
+
+Output the revised draft only — no preamble, no commentary.`
+      : `The user has reviewed the draft above and given the following feedback. Regenerate the draft incorporating their feedback. Keep the verbatim-stitching approach — lift the user's exact phrasing from the source material, including the feedback itself if it adds new material. Preserve the section structure and word budgets from the original system prompt.
+
+User feedback:
+${feedback.trim()}
+
+Output the revised draft only — no preamble, no commentary on what changed.`;
+
+  // For edit-mode uploads, the "raw material" and "previous output" are
+  // both the upload itself on the first regen — that's expected and lets
+  // the model treat the upload as both source-to-stitch-from and prior-
+  // draft-to-incorporate-feedback-into.
+  const maxTokens = mode === "edit" ? 4096 : 1024;
+
+  streamClaude(
+    client,
+    {
+      systemPrompt,
+      messages: [
+        { role: "user", content: rawInterview.trim() },
+        { role: "assistant", content: previousOutput.trim() },
+        { role: "user", content: revisionInstruction },
+      ],
+      maxTokens,
+      model: "claude-sonnet-4-6",
+    },
+    {
+      onDelta: (text) => {
+        if (!cancelled) onToken(text);
+      },
+      onComplete: (fullText) => {
+        if (!cancelled) onComplete(fullText);
+      },
+      onError: (err) => {
+        if (!cancelled) onError(err.message);
+      },
+    }
+  );
+
+  return {
+    cancel: () => {
+      cancelled = true;
+    },
+  };
+}

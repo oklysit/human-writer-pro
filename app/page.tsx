@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { InterviewPanel } from "@/components/interview-panel";
 import { PreviewPanel } from "@/components/preview-panel";
-import { EditChat } from "@/components/edit-chat";
 import { useSessionStore, useCanAssemble } from "@/lib/store";
-import { assemble } from "@/lib/assemble";
+import { assemble, assembleWithFeedback } from "@/lib/assemble";
 import type { AIIsmMatch } from "@/lib/ai-ism-detector";
 import { cn } from "@/lib/utils";
 
@@ -32,35 +31,12 @@ export default function HomePage() {
   const [settingsOpen, setSettingsOpen] = React.useState(false);
 
   // ---------------------------------------------------------------------------
-  // Text selection → EditChat state
+  // EditChat trigger removed in MVP. Whole-output regenerate-with-feedback
+  // (in PreviewPanel) handles refinement; paragraph-level Edit Chat ships
+  // in the codebase but no UI surface invokes it. See
+  // project_edit_chat_selection_scope.md (career-forge memory) for the
+  // selection-respecting refactor that will land post-MVP.
   // ---------------------------------------------------------------------------
-  const [pendingSelection, setPendingSelection] = React.useState<string | null>(null);
-  const [showEditPrompt, setShowEditPrompt] = React.useState(false);
-  const [selectedParagraph, setSelectedParagraph] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    function handleMouseUp() {
-      const selection = window.getSelection();
-      if (selection && selection.toString().trim().length > 3) {
-        const anchor = selection.anchorNode;
-        if (anchor instanceof Text || anchor instanceof Element) {
-          const paragraph = (anchor instanceof Text
-            ? anchor.parentElement
-            : anchor
-          )?.closest(".prose-output p");
-          if (paragraph) {
-            setPendingSelection(paragraph.textContent ?? null);
-            setShowEditPrompt(true);
-            return;
-          }
-        }
-      }
-      setShowEditPrompt(false);
-    }
-
-    document.addEventListener("mouseup", handleMouseUp);
-    return () => document.removeEventListener("mouseup", handleMouseUp);
-  }, []);
 
   // ---------------------------------------------------------------------------
   // Assemble handler
@@ -107,13 +83,12 @@ export default function HomePage() {
   }, []);
 
   // ---------------------------------------------------------------------------
-  // Regenerate handler — called from PreviewPanel when user clicks
-  // "Regenerate avoiding these" in DiagnosticPills.
-  //
-  // Per the 2026-04-14 strip-to-band-35 commit, the assembly call no longer
-  // accepts a bannedPatterns parameter — every layer added to the assembly
-  // prompt costs VR. Regen is now just a fresh re-assemble against the same
-  // raw interview; the AI-ism diagnostic stays as informational signal.
+  // Regenerate handler — fired from DiagnosticPills "Regenerate avoiding
+  // these" button. Fresh re-assemble against the same raw interview; the
+  // AI-ism diagnostic stays as informational signal. Per the 2026-04-14
+  // strip-to-band-35 commit, the assembly call doesn't accept a
+  // bannedPatterns parameter — every layer added to the assembly prompt
+  // costs VR.
   // ---------------------------------------------------------------------------
   function handleRegenerate(_matches: AIIsmMatch[]): void {
     if (!apiKey || !mode) return;
@@ -147,10 +122,62 @@ export default function HomePage() {
   }
 
   // ---------------------------------------------------------------------------
+  // Regenerate-with-feedback handler — fired from PreviewPanel after the
+  // user dictates/types feedback on the current output. Picks the assemble
+  // mode based on outputSource:
+  //   "interview" → CL framework prompt (preserves 5-section structure)
+  //   "upload"    → generic edit prompt (preserves voice + structure of the
+  //                 uploaded draft, applies feedback minimally)
+  // The "rawInterview" passed to assembleWithFeedback is the upload content
+  // for upload-sourced output, otherwise the interview transcript.
+  // ---------------------------------------------------------------------------
+  function handleRegenerateWithFeedback(feedback: string): void {
+    if (!apiKey) return;
+
+    const state = useSessionStore.getState();
+    const previousOutput = state.output;
+    if (!previousOutput) return;
+
+    const isUpload = state.outputSource === "upload";
+    const rawInterview =
+      isUpload && state.uploadedDraftContent
+        ? state.uploadedDraftContent
+        : state.interview.rawTranscript;
+    const feedbackMode = isUpload ? ("edit" as const) : ("cl" as const);
+
+    cancelRef.current?.();
+
+    setGenerating(true);
+    setOutput("");
+    setVRScore(null);
+
+    const { cancel } = assembleWithFeedback({
+      apiKey,
+      rawInterview,
+      previousOutput,
+      feedback,
+      mode: feedbackMode,
+      onToken: (delta) => {
+        const current = useSessionStore.getState().output;
+        useSessionStore.getState().setOutput(current + delta);
+      },
+      onComplete: (fullText) => {
+        setOutput(fullText);
+        setGenerating(false);
+      },
+      onError: (msg) => {
+        setError(msg);
+        setGenerating(false);
+      },
+    });
+
+    cancelRef.current = cancel;
+  }
+
+  // ---------------------------------------------------------------------------
   // Derived flags
   // ---------------------------------------------------------------------------
   const apiKeyMissing = apiKey === null;
-  const editChatActive = selectedParagraph !== null;
 
   // ---------------------------------------------------------------------------
   // Render
@@ -219,48 +246,17 @@ export default function HomePage() {
         </div>
 
         {/* ------------------------------------------------------------------
-            RIGHT PANEL — Preview + EditChat (55%)
+            RIGHT PANEL — Preview (55%)
+            EditChat trigger hidden in MVP; whole-output regenerate-with-
+            feedback in PreviewPanel handles refinement instead.
             ------------------------------------------------------------------ */}
         <div className="flex flex-col flex-1 min-w-0 min-h-0 relative">
-          {/* Preview area — fills space; shrinks when EditChat is active */}
-          <div
-            className={cn(
-              "flex-1 min-h-0 overflow-y-auto px-6 py-5",
-              editChatActive && "shrink"
-            )}
-          >
-            <PreviewPanel onRegenerate={handleRegenerate} />
-
-            {/* "Edit paragraph" float button — appears on valid selection */}
-            {showEditPrompt && pendingSelection && !editChatActive && (
-              <div className="sticky bottom-4 flex justify-end mt-4">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="font-mono text-xs uppercase tracking-wider shadow-sm"
-                  onClick={() => {
-                    setSelectedParagraph(pendingSelection);
-                    setShowEditPrompt(false);
-                  }}
-                >
-                  Edit paragraph
-                </Button>
-              </div>
-            )}
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
+            <PreviewPanel
+              onRegenerate={handleRegenerate}
+              onRegenerateWithFeedback={handleRegenerateWithFeedback}
+            />
           </div>
-
-          {/* EditChat — stacked below preview when active */}
-          {editChatActive && (
-            <div className="shrink-0 border-t border-border min-h-[280px] max-h-[40vh] overflow-y-auto">
-              <EditChat
-                selectedParagraph={selectedParagraph}
-                onClose={() => {
-                  setSelectedParagraph(null);
-                  setShowEditPrompt(false);
-                }}
-              />
-            </div>
-          )}
         </div>
       </div>
 

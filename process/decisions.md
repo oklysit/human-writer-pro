@@ -10,6 +10,42 @@ Newest entries first.
 
 ---
 
+## 2026-04-15 — Replaced paragraph-Edit-Chat with whole-output regenerate-with-feedback (Clarity: 0.85)
+
+**Killed claim:** "Edit Chat must work at the paragraph level via a Socratic complaint→question→answer→restitch flow on a selected paragraph; that's the load-bearing UX for refinement."
+
+**Reframed as:** For MVP, the right edit primitive is whole-output regenerate-with-voice-feedback. The user dictates what should change ("tighten the intro to focus on X; vary the closing line"), and the assembler regenerates the draft incorporating that feedback as a 3rd conversation turn. Selection-respecting Edit Chat with single-word inline editing is the right v2 design but not load-bearing for a working demo.
+
+**Source:** User feedback 2026-04-15 mid-MVP push, citing the Career Forge dashboard as a proven instance of the same pattern: eye-test the artifact, ask for changes via voice, regenerate. The simpler workflow demos cleanly in 5 minutes; the selection-respecting refactor requires range-tracking + anchor-based replacement + two UI paradigms (popover for word-level vs side panel for paragraph-level).
+
+**Impact:** Avoided ~10h of Edit Chat selection refactor work that wouldn't have shipped in the 8-hour MVP window. The new regenerate-with-feedback handler in `lib/assemble.ts` (cl/edit modes) + UI in `components/preview-panel.tsx` ship as the MVP edit primitive. Paragraph-level Edit Chat component still ships in the codebase (no UI surface invokes it). Selection refactor scoped in career-forge memory `project_edit_chat_selection_scope.md` for v2.
+
+---
+
+## 2026-04-15 — Shipped v4.1 framework port despite GPTZero pass-rate variance (Clarity: 0.7)
+
+**Killed claim:** "Don't ship a framework change until k=3 GPTZero scores ≥ 78% pass rate (the v3 Letter 2 baseline)."
+
+**Reframed as:** GPTZero variance on this fixture (1-2/3 pass across all three prompts tested — v3, v4 rigid, v4.1 loose+capped) dwarfs the prompt-level effect we're trying to measure. The fixture's dense technical cybersecurity content register is the GPTZero flip driver, not the prompt regime. v4.1's framework adherence (moment-hook, mandatory bullets, conditional gap, banned phrases absent, company named 2x) is materially better than v3's wall-of-text prose by the user's eye-test.
+
+**Source:** Three rounds of k=3 verification with GPTZero scoring on the CrowdStrike fixture during the 2026-04-15 MVP push. v3: 99/0/0% human; v4 rigid: 0/83/39%; v4.1 loose+capped: 0/0/47%. Mean human% 15-40% across rounds; variance > effect size.
+
+**Impact:** Avoided ~6h of additional prompt iteration that would not have moved the GPTZero pass rate (variance > effect size). Roughness-injection pass scoped as separate post-MVP experiment to actually narrow the variance band. Decision rests on user's eye-test prioritization over GPTZero noise — defensible but not pre-registered, hence Clarity 0.7. See career-forge memory `feedback_vr_as_within_draft_signal.md` and `feedback_gptzero_burstiness_not_signal.md` for the within-draft-vs-cross-draft framing that emerged from the same session.
+
+---
+
+## 2026-04-15 — GPTZero IS the bar (reversed earlier 'noisy threshold gate' framing) (Clarity: 0.75)
+
+**Killed claim (mid-session, by me):** "GPTZero is too noisy on this fixture to use as decision signal — pick prompts on framework adherence + eye-test alone."
+
+**Reframed as (by user, immediately after):** A product literally called *Human Writer Pro* must reliably pass GPTZero — verbatim-stitched human writing being flagged AI is a brand-level failure, not just measurement noise. Optimization target = Mixed % (per user). Don't ship GPTZero into the product itself (cost-per-check is a deal-breaker), but build automated GPTZero regression for ourselves to ensure consistent passes pre-merge.
+
+**Source:** User pushback 2026-04-15 after I'd framed GPTZero as "too noisy to act on." The earlier framing under-weighted the brand/positioning stake of the product name.
+
+**Impact:** Avoided ~5h of energy that would have gone toward prompt iteration on framework adherence alone without addressing the GPTZero pass-rate variance — the actual product-quality bar a Lawyer.com evaluator would measure against. Clarity 0.75 because the optimization target (Mixed %) is itself unvalidated; we don't have automated GPTZero regression yet to pressure-test. Within-draft VR iteration framing still holds; cross-prompt VR comparison is still meaningless. See `feedback_gptzero_is_the_bar.md` (career-forge memory).
+
+---
+
 ## 2026-04-13 — VR = 35% reframed from target to prompt nudge (Clarity: 0.85)
 
 **Killed claim:** "This product targets 35% VR as a success criterion."

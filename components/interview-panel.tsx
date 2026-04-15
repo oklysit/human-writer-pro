@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useSessionStore } from "@/lib/store";
 import { askNextQuestion } from "@/lib/interview-engine";
 import { detectWritingMode } from "@/lib/detectWritingMode";
+import { parseTranscript } from "@/lib/parseTranscript";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useVoiceInput } from "@/lib/useVoiceInput";
@@ -38,6 +39,27 @@ export function InterviewPanel() {
   const [uploadError, setUploadError] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Seed-from-transcript dev utility — pre-interview only.
+  const [seedOpen, setSeedOpen] = React.useState(false);
+  const [seedDraft, setSeedDraft] = React.useState("");
+  const [seedError, setSeedError] = React.useState<string | null>(null);
+
+  function handleSeedTranscript() {
+    const result = parseTranscript(seedDraft);
+    if (!result.ok) {
+      setSeedError(result.error);
+      return;
+    }
+    useSessionStore.getState().seedInterview(result.turns);
+    setSeedDraft("");
+    setSeedError(null);
+    setSeedOpen(false);
+    toast({
+      title: "Interview seeded",
+      description: `${result.turns.length} turns loaded (${result.markerStyle}). Click Assemble when ready.`,
+    });
+  }
 
   // Ref for scroll-to-bottom on new turns
   const historyEndRef = React.useRef<HTMLDivElement>(null);
@@ -556,6 +578,60 @@ export function InterviewPanel() {
               Add your API key in Settings to begin.
             </p>
           )}
+
+          {/* Seed-from-prior-transcript dev utility — collapsed by default. */}
+          <div className="mt-1">
+            {!seedOpen ? (
+              <button
+                type="button"
+                onClick={() => setSeedOpen(true)}
+                className="font-mono text-[0.625rem] text-muted-foreground/70 hover:text-foreground uppercase tracking-wider"
+              >
+                · or seed from prior transcript
+              </button>
+            ) : (
+              <div className="flex flex-col gap-2 mt-1 border border-border bg-background p-2 rounded-sm">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[0.625rem] text-foreground uppercase tracking-wider">
+                    Seed Interview from Transcript
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSeedOpen(false);
+                      setSeedDraft("");
+                      setSeedError(null);
+                    }}
+                    className="font-mono text-[0.625rem] text-muted-foreground hover:text-foreground"
+                  >
+                    cancel
+                  </button>
+                </div>
+                <textarea
+                  value={seedDraft}
+                  onChange={(e) => {
+                    setSeedDraft(e.target.value);
+                    if (seedError) setSeedError(null);
+                  }}
+                  placeholder={`Paste a prior interview transcript. Markers supported:\n[USER]: ... / [ASSISTANT]: ...\nUser: ... / Assistant: ...\n**You:** ... / **Interviewer:** ...\nQ: ... / A: ...\n\nNo markers? The whole text becomes one user turn.`}
+                  rows={6}
+                  className="resize-y w-full border border-border bg-card p-2 font-mono text-[0.6875rem] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+                {seedError && (
+                  <p className="font-mono text-xs text-destructive">{seedError}</p>
+                )}
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleSeedTranscript}
+                  disabled={!seedDraft.trim()}
+                  className="self-end font-mono text-xs uppercase tracking-wider"
+                >
+                  Parse + Seed
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <div className="px-5 py-4 border-t border-border shrink-0 flex flex-col gap-2">

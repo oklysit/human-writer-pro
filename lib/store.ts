@@ -86,6 +86,14 @@ type AppActions = {
   updateMode: (mode: Mode) => void;
   setContextNotes: (notes: string) => void;
   addInterviewTurn: (turn: InterviewTurn) => void;
+  /**
+   * Bulk-replace the interview turns from a parsed transcript. Used by
+   * the dev "Seed from prior transcript" utility to skip re-doing an
+   * interview when iterating on assembly. Recomputes rawTranscript via
+   * stripInterviewQuestions so the assembler sees the same shape as
+   * native interview output.
+   */
+  seedInterview: (turns: InterviewTurn[]) => void;
   setInterviewStatus: (status: AppState["interview"]["status"]) => void;
   setLastAssessment: (assessment: LastAssessment) => void;
   setOutput: (output: string) => void;
@@ -160,6 +168,16 @@ export const useSessionStore = create<AppState & AppActions>()(
             },
           };
         }),
+
+      seedInterview: (turns) =>
+        set((state) => ({
+          interview: {
+            ...state.interview,
+            turns,
+            rawTranscript: stripInterviewQuestions(turns),
+            status: turns.some((t) => t.role === "user") ? "asking" : "idle",
+          },
+        })),
 
       setInterviewStatus: (status) =>
         set((state) => ({ interview: { ...state.interview, status } })),

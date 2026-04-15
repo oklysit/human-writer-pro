@@ -133,14 +133,25 @@ export function PreviewPanel({
   // For upload-sourced output, VR is computed against the upload (the
   // material the user is iterating from), not the empty interview
   // transcript — otherwise it would always read 0% and confuse.
+  //
+  // feedbackHistory is folded into the denominator: every feedback string
+  // the user has submitted is as much "the user's words" as the interview
+  // transcript, so verbatim stitching from a regen-with-feedback round
+  // should count toward VR. Without this, a model that correctly
+  // incorporated a feedback phrase verbatim would look like it was
+  // inventing prose.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!isGenerating && output.length > 0 && vrScore === null) {
       const state = useSessionStore.getState();
-      const rawSource =
+      const rawBase =
         state.outputSource === "upload" && state.uploadedDraftContent
           ? state.uploadedDraftContent
           : state.interview.rawTranscript;
+      const rawSource =
+        state.feedbackHistory.length > 0
+          ? `${rawBase}\n\n${state.feedbackHistory.join("\n\n")}`
+          : rawBase;
       const result = computeVR(rawSource, output);
       setVRScore(result);
       // Run the AI-ism detector on the completed output.

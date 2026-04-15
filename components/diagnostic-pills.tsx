@@ -84,8 +84,9 @@ export function DiagnosticPills({
             </TooltipTrigger>
             <TooltipContent className="max-w-xs text-xs leading-relaxed">
               Verbatim Ratio — percentage of 5-word phrases in the output that
-              appear in your raw interview. Diagnostic only; the prompt regime
-              is the causal driver of detection-evading prose. See{" "}
+              appear in your raw interview and any regenerate-with-feedback
+              text you submitted. Diagnostic only; the prompt regime is the
+              causal driver of detection-evading prose. See{" "}
               <code className="font-mono">eval/reports/vr-validation.md</code>{" "}
               for the 54-variant pilot that established this.
             </TooltipContent>

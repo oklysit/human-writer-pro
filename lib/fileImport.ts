@@ -53,18 +53,39 @@ export async function extractText(file: File): Promise<string> {
 }
 
 async function extractPdfText(file: File): Promise<string> {
-  const pdfjs = await import("pdfjs-dist");
+  // Use the explicit .min.mjs build path. The bare "pdfjs-dist" entry
+  // hits a Next.js 14 webpack bundling failure where the ESM namespace
+  // gets wrapped in a frozen proxy and pdfjs's internal Object.defineProperty
+  // calls fail with "called on non-object". The build/pdf.min.mjs path
+  // gets bundled as a separate chunk that doesn't trip the wrapper.
+  let pdfjs: typeof import("pdfjs-dist");
+  try {
+    // @ts-expect-error pdfjs-dist 5.x doesn't ship .d.ts for the subpath
+    // entries, but the runtime exports match the root entry exactly.
+    pdfjs = (await import("pdfjs-dist/build/pdf.min.mjs")) as typeof import("pdfjs-dist");
+  } catch (err) {
+    throw new Error(
+      `pdfjs-dist module load failed: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+  const { getDocument, GlobalWorkerOptions } = pdfjs;
+
   // Worker is copied to /public/pdf.worker.min.mjs at install time so it
-  // ships at same-origin (CSP script-src 'self' allows). Keeping it as a
-  // public asset avoids bundler-resolution edge cases with `import.meta.url`
-  // under Next.js 14 webpack. If pdfjs-dist is upgraded, re-copy the worker:
-  //   cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/
-  if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-    pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+  // ships at same-origin (CSP script-src 'self' allows). If pdfjs-dist
+  // is upgraded, the postinstall script re-copies it.
+  if (!GlobalWorkerOptions.workerSrc) {
+    GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
   }
 
   const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+  let pdf: Awaited<ReturnType<typeof getDocument>["promise"]>;
+  try {
+    pdf = await getDocument({ data: arrayBuffer }).promise;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error && err.stack ? `\nstack: ${err.stack}` : "";
+    throw new Error(`pdfjs getDocument failed: ${msg}${stack}`);
+  }
 
   const pages: string[] = [];
   for (let i = 1; i <= pdf.numPages; i++) {

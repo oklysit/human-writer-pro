@@ -68,6 +68,7 @@ export function PreviewPanel({
   const vrScore = useSessionStore((s) => s.vrScore);
   const setVRScore = useSessionStore((s) => s.setVRScore);
   const mode = useSessionStore((s) => s.mode);
+  const outputSource = useSessionStore((s) => s.outputSource);
   const setUploadedDraft = useSessionStore((s) => s.setUploadedDraft);
   const setError = useSessionStore((s) => s.setError);
 
@@ -239,7 +240,19 @@ export function PreviewPanel({
     <div className={cn("flex flex-col gap-4", className)}>
       {/* Header row */}
       <div className="flex items-baseline justify-between">
-        <span className="label-caps text-foreground">Output</span>
+        <span className="label-caps text-foreground">
+          Output
+          {output.length > 0 && outputSource === "upload" && (
+            <span className="ml-2 font-mono text-[0.625rem] tracking-wider text-accent">
+              · editing uploaded draft
+            </span>
+          )}
+          {output.length > 0 && outputSource === "interview" && (
+            <span className="ml-2 font-mono text-[0.625rem] tracking-wider text-muted-foreground">
+              · from interview
+            </span>
+          )}
+        </span>
         {output.length > 0 && (
           <span className="label-caps text-muted-foreground">
             {wordCount} words

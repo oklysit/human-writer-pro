@@ -96,6 +96,16 @@ export type AppState = {
    * slider/input near the Assemble button.
    */
   targetWords: number | null;
+  /**
+   * Every feedback string the user submitted via regenerate-with-feedback
+   * since the session started (or last setMode reset). These are as much
+   * "the user's words" as the interview transcript — they get folded into
+   * the VR denominator so verbatim stitching from the feedback counts
+   * toward the score. Appended on submit; cleared only on setMode / reset.
+   * A regenerate round does NOT clear it (feedback accumulates across
+   * rounds).
+   */
+  feedbackHistory: string[];
   vrScore: VRResult | null;
   edits: EditTurn[];
   isGenerating: boolean;
@@ -128,6 +138,11 @@ type AppActions = {
    */
   setUploadedDraft: (content: string) => void;
   setTargetWords: (n: number | null) => void;
+  /**
+   * Push a feedback string onto feedbackHistory. Called from the
+   * regenerate-with-feedback handler; empty strings are silently dropped.
+   */
+  appendFeedback: (s: string) => void;
   attachFile: (file: AttachedFile) => void;
   removeAttachedFile: (id: string) => void;
   setVRScore: (score: VRResult | null) => void;
@@ -152,6 +167,7 @@ const initialState: AppState = {
   outputSource: null,
   uploadedDraftContent: null,
   targetWords: null,
+  feedbackHistory: [],
   vrScore: null,
   edits: [],
   isGenerating: false,
@@ -174,6 +190,7 @@ export const useSessionStore = create<AppState & AppActions>()(
           output: "",
           outputSource: null,
           uploadedDraftContent: null,
+          feedbackHistory: [],
           vrScore: null,
           edits: [],
           error: null,
@@ -233,6 +250,12 @@ export const useSessionStore = create<AppState & AppActions>()(
         }),
 
       setTargetWords: (n) => set({ targetWords: n }),
+
+      appendFeedback: (s) => {
+        const trimmed = s.trim();
+        if (trimmed.length === 0) return;
+        set((state) => ({ feedbackHistory: [...state.feedbackHistory, trimmed] }));
+      },
 
       attachFile: (file) =>
         set((state) => ({ attachedFiles: [...state.attachedFiles, file] })),

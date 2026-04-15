@@ -213,6 +213,12 @@ export default function HomePage() {
 
     cancelRef.current?.();
 
+    // Record this feedback as user-authored text so the next VR compute
+    // can fold it into the denominator alongside rawInterview. The
+    // assembler already receives `feedback` as a separate param for the
+    // edit instruction; this is the diagnostic-side bookkeeping.
+    useSessionStore.getState().appendFeedback(feedback);
+
     setGenerating(true);
     setOutput("");
     setVRScore(null);

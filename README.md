@@ -25,13 +25,21 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:3000>, then:
+Open <http://localhost:3000>, then pick one of two flows:
+
+### Write something new
 
 1. Click **Settings** (top-right), paste an Anthropic API key. The key persists to your browser's localStorage only — it never reaches a server.
 2. Paste context into the **Context** panel, or upload a file (.pdf / .docx / .md / .txt). For a cover letter, paste the job posting; for a school assignment, upload the assignment PDF + rubric.
-3. Click **Start Interview**. Answer one question at a time. Use the mic if you'd rather speak.
+3. Click **Start Interview**. Answer one question at a time. Use the mic if you'd rather speak — Enter sends, Shift+Enter for newline.
 4. When the interviewer signals it has enough material, click **Assemble**.
-5. Highlight any paragraph that doesn't land and click **Edit paragraph** for a Socratic refine flow.
+5. To refine: click **Regenerate with feedback** under the output, dictate or type what should change ("tighten the intro to focus on X; vary the closing line"), and the assembler rewrites the draft incorporating your feedback.
+
+### Edit an existing draft
+
+1. From the empty Output panel, click **Or upload an existing draft to edit**.
+2. Pick a .md / .txt / .pdf / .docx — your draft loads into Output as-is.
+3. Click **Regenerate with feedback**, dictate your edits, and HWP rewrites the draft preserving your voice and structure (no CL framework imposed; appropriate for any long-form text).
 
 ## The orchestration
 
@@ -39,9 +47,9 @@ Open <http://localhost:3000>, then:
 |---|---|---|
 | Adaptive interviewer | Sonnet 4.6 | One question at a time, judges readiness, pushes back on vague answers |
 | Assembler | Sonnet 4.6 | Verbatim-stitching prompt; 5-section killer-CL framework when in cover-letter mode |
-| Edit Chat | Sonnet 4.6 (2 calls) | Socratic complaint→question→answer→restitch on selected paragraphs |
+| Regenerate-with-feedback | Sonnet 4.6 | 3-turn conversation (raw / prior draft / feedback) — `cl` mode preserves the killer-CL framework, `edit` mode preserves arbitrary uploaded drafts |
 | Voice input | Web Speech API | Live transcript, base-snapshot append; no audio leaves the browser |
-| File context | pdfjs-dist + mammoth | Browser-side text extraction from .pdf / .docx / .md / .txt |
+| File context + draft import | pdfjs-dist + mammoth | Browser-side text extraction from .pdf / .docx / .md / .txt |
 
 The build itself runs the same orchestration pattern internally — an Opus 4.6 orchestrator dispatches Sonnet 4.6 implementer subagents for build tasks, with Opus 4.6 reviewers checking spec compliance and code quality on each. See [`MOJO-SETUP.md`](./MOJO-SETUP.md) for the full setup, model routing, and Decision Value log.
 
@@ -65,8 +73,8 @@ app/                          Next.js routes (single-page workspace)
 components/                   React components (interview, preview, edit-chat)
 lib/
   anthropic-client.ts         BYO-key client (+ optional dev OAuth proxy)
-  assemble.ts                 Assembly system prompt (band-35 verbatim stitching)
-  interview-engine.ts         Adaptive interviewer + Socratic edit
+  assemble.ts                 Assembly + regenerate-with-feedback (cl/edit modes)
+  interview-engine.ts         Adaptive interviewer + Socratic edit-chat engine
   prompts/modes/              Mode-specific guidance (cover-letter is the load-bearing mode)
   useVoiceInput.ts            Web Speech API hook
   fileImport.ts               Browser-side .pdf/.docx/.md/.txt extraction

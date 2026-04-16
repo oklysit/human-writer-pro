@@ -64,7 +64,7 @@ async function extractPdfText(file: File): Promise<string> {
   try {
     // Legacy subpath ships .d.mts types (pdf.d.mts) so no @ts-expect-error
     // needed. Runtime exports match the root entry exactly.
-    pdfjs = (await import("pdfjs-dist/legacy/build/pdf.mjs")) as typeof import("pdfjs-dist");
+    pdfjs = (await import("pdfjs-dist/legacy/build/pdf.min.mjs")) as typeof import("pdfjs-dist");
   } catch (err) {
     throw new Error(
       `pdfjs-dist module load failed: ${err instanceof Error ? err.message : String(err)}`

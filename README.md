@@ -12,7 +12,7 @@ You upload context (a job posting, a school assignment + rubric, a research pape
 
 **This is not a content generator.** You can't draft without first producing your own raw material. The interview gates the assembly button until the model judges you've given it enough to work with — that's architectural, not a policy toggle.
 
-**This is a productized version of the [human-writer Claude Code skill](https://github.com/oklysit/writer)** — same interview-then-assemble pattern that originated in WGU academic-assignment work, generalized to a web app with voice input and a richer UI.
+**This is a productized version of a personalized Claude Code skill** — same interview-then-assemble pattern that originated in WGU academic-assignment work, generalized to a web app with voice input and a richer UI.
 
 ## Quick start (5 minutes)
 
@@ -119,7 +119,7 @@ Not in MVP — landing post-submission. Full writeups + budget estimates in
 - **Roughness-injection pass.** Re-introduce sentence-length variance post-assembly for dense-technical-content registers.
 
 **Medium-term:**
-- **Voice profile memory.** Distill recurring speech patterns from accumulated transcripts into a compact profile that the assembly prompt uses automatically. Productizes the manual `voice-profile.md` process from the parent human-writer skill.
+- **Voice profile memory.** Distill recurring speech patterns from accumulated transcripts into a compact profile that the assembly prompt uses automatically. Productizes the manual voice-profile process from the parent skill.
 
 **Research:**
 - **Local model fine-tuning from transcripts.** Use interview Q&A pairs to train a small model (LoRA on Llama / SmolLM) whose natural output approximates the user's voice. Hybrid approach: small model for voice texture, frontier model for structure.
@@ -148,7 +148,7 @@ HWP is the productized output of one component of **Career Forge** — a multi-a
 
 ## Attribution
 
-- **[human-writer Claude Code skill](https://github.com/oklysit/writer)** — original interview-then-assemble pattern this product is built on
+- **human-writer (personalized Claude Code skill)** — original interview-then-assemble pattern this product is built on
 - **Anthropic Claude** (Sonnet 4.6 in the product, Opus 4.6 for orchestration during the build) — generator and judge
 - **shadcn/ui + Radix UI** — primitive components
 - **Next.js 14 + TypeScript + Tailwind CSS** — app framework

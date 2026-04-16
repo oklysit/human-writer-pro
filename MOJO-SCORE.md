@@ -64,26 +64,30 @@ HWP/career-forge/VR/lawyer-titled windows.
 
 ---
 
-## 3. Decision Value — 34.35 weighted hours
+## 3. Decision Value — 33.58 weighted hours (cross-model averaged)
 
 Entries in `mojo-log.jsonl` and `process/decisions.md`. Each row =
-Investment Avoided × Clarity Score.
+Investment Avoided × Clarity Score. Clarity Scores are the 4-model
+cross-review average (Opus 4.6 / Gemini 3.1 Pro / GLM 5.1 / Kimi K2.5 —
+see §6). Self-assessed score shown alongside for transparency.
 
-| Date | Decision | IA (h) | Clarity | Weighted |
-|---|---|---|---|---|
-| 2026-04-13 | VR is not the causal lever for GPTZero; prompt regime is. Reframed after external reviewer pushback on the n=54 pilot. | 12 | 0.9 | 10.80 |
-| 2026-04-15 | Replaced paragraph Edit Chat with whole-output regenerate-with-feedback (Career-Forge dashboard pattern). | 10 | 0.85 | 8.50 |
-| 2026-04-15 | Shipped v4.1 framework port despite GPTZero variance (eye-test + framework adherence prioritized; variance is content-register-driven). | 6 | 0.70 | 4.20 |
-| 2026-04-15 | Reversed earlier "GPTZero is just noise" framing — the product name makes it a real bar. Optimize Mixed % going forward. | 5 | 0.75 | 3.75 |
-| 2026-04-15 | Pivoted Mojo submission framing: HWP is the project (not Career Forge); multi-mode polish deferred. | 4 | 0.80 | 3.20 |
-| 2026-04-16 | Deferred inline text editing (vs selection-based single-word inline design). Regenerate-with-feedback covers the "change one thing" use case; selection-based is post-MVP. | 3 | 0.85 | 2.55 |
-| 2026-04-16 | Scoped "Ignore AI-isms" down from surgical-preserve-verbatim to dismiss-only. Detector is pattern-match; false positives are unavoidable; hiding the pill is the cheap honest fix. | 1.5 | 0.90 | 1.35 |
-| **Total** | | | | **34.35** |
+| Date | Decision | IA (h) | Self | **Cross-avg** | Weighted |
+|---|---|---|---|---|---|
+| 2026-04-13 | VR is not the causal lever for GPTZero; prompt regime is. Reframed after external reviewer pushback on the n=54 pilot. | 12 | 0.90 | **0.900** | 10.80 |
+| 2026-04-15 | Replaced paragraph Edit Chat with whole-output regenerate-with-feedback (Career-Forge dashboard pattern). | 10 | 0.85 | **0.800** | 8.00 |
+| 2026-04-15 | Shipped v4.1 framework port despite GPTZero variance (eye-test + framework adherence prioritized; variance is content-register-driven). | 6 | 0.70 | **0.675** | 4.05 |
+| 2026-04-15 | Reversed earlier "GPTZero is just noise" framing — the product name makes it a real bar. Optimize Mixed % going forward. | 5 | 0.75 | **0.738** | 3.69 |
+| 2026-04-15 | Pivoted Mojo submission framing: HWP is the project (not Career Forge); multi-mode polish deferred. | 4 | 0.80 | **0.800** | 3.20 |
+| 2026-04-16 | Deferred inline text editing (vs selection-based single-word inline design). Regenerate-with-feedback covers the "change one thing" use case; selection-based is post-MVP. | 3 | 0.85 | **0.838** | 2.51 |
+| 2026-04-16 | Scoped "Ignore AI-isms" down from surgical-preserve-verbatim to dismiss-only. Detector is pattern-match; false positives are unavoidable; hiding the pill is the cheap honest fix. | 1.5 | 0.90 | **0.888** | 1.33 |
+| **Total** | | | | | **33.58** |
 
-**Clarity Score calibration** (this document's §6 Review Results has
-4-model averages for the 5 pre-2026-04-16 entries; the 2 Day-6 entries
-were not yet included in the cross-model review and use self-assessed
-Clarity Scores).
+**Cross-model consensus on Clarity:** D3 (ship v4.1) was marked down by
+every reviewer (0.675 vs 0.70 self) — the judgment rests on eye-test
+over a noisy objective metric with no automated regression. D4 (GPTZero
+reversal) similarly soft (0.738 vs 0.75) — direction was clear, target
+(Mixed %) remains unvalidated. D1 (VR reframe) and D7 (AI-isms scope)
+held up cleanly against all four reviewers at ~0.9.
 
 ---
 
@@ -218,27 +222,84 @@ Beswick's rubric: clean code ≈ 1.2+; problematic ≈ 0.7 or below; midpoint
   wasn't exhaustive pre-UAT.
 
 **Self-assessed QF: 1.2.** §6 below contains the external review
-aggregate across four models.
+aggregate across four models — **cross-model average: 1.175** (rounds
+to 1.2 at single-decimal precision, but §7 uses 1.175 in the math). Three
+of four models landed on 1.15; one (Gemini) at 1.25.
 
 ---
 
-## 6. LLM Review Results (cross-model average)
+## 6. LLM Review Results (cross-model average — completed 2026-04-16)
 
-*Populated after the code-review and decision-log-review runs land.
-Individual model outputs in `eval/reports/mojo-review-2026-04-16/`.*
+Four independent models reviewed SHA `f0ec908` against Beswick's verbatim
+definitions (Manifesto Part 3). Each produced a Quality Factor score and
+per-decision Clarity Scores from the same bundled prompt + codebase
+excerpts. Individual model outputs: `eval/reports/mojo-review-2026-04-16/`.
 
 | Model | Quality Factor | Clarity (log-average) |
 |---|---|---|
-| Opus 4.6 | _pending_ | _pending_ |
-| Gemini 3.1 Pro | _pending_ | _pending_ |
-| GLM 5.1 | _pending_ | _pending_ |
-| Kimi K2.5 | _pending_ | _pending_ |
-| **Average** | **_pending_** | **_pending_** |
+| Opus 4.6 | 1.15 | 0.786 |
+| Gemini 3.1 Pro | 1.25 | 0.843 |
+| GLM 5.1 | 1.15 | 0.771 |
+| Kimi K2.5 | 1.15 | 0.821 |
+| **Cross-model average** | **1.175** | **0.805** |
 
-Final MoJo Score in §7 uses the cross-model averaged QF (fallback: 1.2
-self-assessed if one or more models fail). Per-decision Clarity Scores
-in §3 are updated to the cross-model averages where the original was
-≥0.15 away from the aggregate.
+### Convergent strengths (cited by ≥3 of 4 reviewers)
+
+1. **Pre-registered n=54 VR pilot with revision discipline** (all 4).
+   Fisher's p<0.0001, SHA-locked hypotheses, TL;DR revised twice after
+   external pushback. Cited as the strongest signal of engineering
+   culture.
+2. **Voice hook production hardening** (Opus, GLM, Kimi).
+   `useVoiceInput.ts` handles Chrome's ~15-20s silent auto-end via
+   `shouldRestartRef`, nulls handlers before `.stop()` to prevent
+   post-submit leakage, SSR-safe. "Not typical at this project scale."
+3. **Commit hygiene + honest framing** (all 4). WHY-forward commit
+   messages, inline prompt version history in `lib/assemble.ts`, README
+   cleanly separates shipped vs roadmap.
+
+### Convergent concerns (cited by ≥2 of 4 reviewers)
+
+1. **Orphaned multi-mode files** (all 4). Mode union lists 5 literals
+   (`cover-letter | email | essay | blog | free-form`) while only
+   cover-letter is wired; `lib/prompts/modes/{email,essay,blog,free-form}.ts`
+   exist but are not exercised by any shipped path. Opus: "honest debt
+   but it is debt." Kimi: "four of five writing modes are architecture-only."
+2. **`components/edit-chat.tsx` — 514 LOC dead code** (Opus). No UI
+   surface invokes it; the decision to defer was half-executed. Flagged
+   as the strongest concrete argument against a clean 1.2.
+3. **`components/interview-panel.tsx` — 830 LOC + duplicated voice wiring**
+   (Opus, GLM). Context dock and answer dock carry near-identical voice
+   hooks / base-snapshot refs / separator logic / autoscroll effects. A
+   `useVoiceTextarea` custom hook would collapse ~100 lines.
+4. **Soft streaming cancel** (Kimi, GLM). `assemble.ts` uses a
+   post-hoc `cancelled` boolean rather than `AbortController`, so the
+   Anthropic API call continues consuming tokens after the user stops.
+5. **BYO-key + `dangerouslyAllowBrowser: true` + localStorage persistence**
+   (Opus, GLM). Defensible for a personal tool, but any script injection
+   exfiltrates the key; roadmap doesn't mention a server proxy.
+6. **D3 (ship v4.1 despite variance) self-score 0.70 overstated** (3 of 4).
+   Cross-model consensus 0.675. The 1/3 GPTZero pass rate with "variance
+   > effect size" defense is a judgment call, not a definitive signal.
+7. **D4 (GPTZero reversal) target unvalidated** (3 of 4). Mixed %
+   optimization is direction-forcing but has no automated regression to
+   pressure-test.
+
+### Unique signals worth calling out
+
+- **Opus flags §8 headline lean on no-AI baseline.** Scenario B's ~28x
+  TVH uses traditional-labor baseline while §4 admits a realistic user
+  already uses generic AI — disclosure is present but headline still
+  uses the larger number.
+- **GLM flags D3+D4 substantive overlap.** Both address GPTZero variance
+  from the same session and could reasonably be one decision; separate
+  entries may inflate the DV numerator.
+- **Gemini flags Anthropic SDK lock-in.** Tight coupling would require
+  refactoring to support multi-provider orchestration later. Not on the
+  roadmap.
+
+Final MoJo Score in §7 uses the cross-model averaged QF (1.175) and the
+cross-model averaged Clarity Scores from the §3 table (total Decision
+Value 33.58 weighted hours).
 
 ---
 
@@ -246,18 +307,24 @@ in §3 are updated to the cross-model averages where the original was
 
 ### Beswick-aligned (primary — this is what the rubric expects)
 
-Using **QF = 1.2** (self-assessed; will be updated post-§6 review):
+Using **QF = 1.175** (cross-model average from §6) and **Decision Value =
+33.58** (§3 cross-model-averaged Clarity):
 
 | Scenario | Business Impact (TVH) | Quality Factor | Delivered Value | + Decision Value | / Active Hours | **MoJo Score** |
 |---|---|---|---|---|---|---|
-| A (own-use only) | 164 | 1.2 | 196.8 | +34.35 = 231.15 | / 17.2 | **13.4x** |
-| B (5-user projection) | 376 | 1.2 | 451.2 | +34.35 = 485.55 | / 17.2 | **28.2x** |
-| C (50-user projection) | 2,279 | 1.2 | 2,734.8 | +34.35 = 2,769.15 | / 17.2 | **161.0x** |
+| A (own-use only) | 164 | 1.175 | 192.7 | +33.58 = 226.28 | / 17.2 | **13.2x** |
+| B (5-user projection) | 376 | 1.175 | 441.8 | +33.58 = 475.38 | / 17.2 | **27.6x** |
+| C (50-user projection) | 2,279 | 1.175 | 2,677.8 | +33.58 = 2,711.41 | / 17.2 | **157.6x** |
 
-**Suggested number for the email:** **Scenario B at ~28x** — honest
-(projects a small realistic user base rather than the builder alone, but
-doesn't fabricate 50-user traction). Conservative fallback: **~13x
-(Scenario A)**.
+**Suggested number for the email:** **Scenario B at ~28x** (27.6x rounds
+to 28x) — honest (projects a small realistic user base rather than the
+builder alone, but doesn't fabricate 50-user traction). Conservative
+fallback: **~13x (Scenario A)**.
+
+**Sensitivity note.** Self-assessed QF=1.2 with self-assessed Clarity
+(DV=34.35) would give 13.4x / 28.2x / 161.0x. The cross-model review
+moves both numbers down by ~0.2x (Scenario A) and ~0.6x (Scenario B).
+The headline doesn't change at 1-decimal precision.
 
 ### Senior IC hours framework (secondary — sanity check)
 
@@ -282,12 +349,14 @@ not suitable for external citation.
 
 ## 8. Single-number answer for the email
 
-> **Scenario B (5-user Provisional projection + own-use), Quality Factor 1.2:**
+> **Scenario B (5-user Provisional projection + own-use), Quality Factor 1.175 (cross-model average):**
 >
-> **MoJo Score ≈ 28x**
+> **MoJo Score ≈ 28x** (27.6x at full precision)
 >
-> (164 TVH own-use + 212 TVH 5-user-projection) × 1.2 Quality Factor +
-> 34.35 weighted Decision Value, all / 17.2 Active Hours.
+> (164 TVH own-use + 212 TVH 5-user-projection) × 1.175 Quality Factor +
+> 33.58 weighted Decision Value, all / 17.2 Active Hours. QF and per-
+> decision Clarity Scores averaged across four independent reviewers
+> (Opus 4.6 / Gemini 3.1 Pro / GLM 5.1 / Kimi K2.5); full breakdown in §6.
 
 If Ryan asks for the conservative number, **~13x (Scenario A, own-use
 only)**. If he wants to see the projection, **~28x (Scenario B)** is
@@ -327,8 +396,11 @@ denominator.
   measurable near-term usage. Scenarios B and C are honest projections
   with stated assumptions, not data. Per Beswick, Provisional → Confirmed
   once instrumented.
-- **Quality Factor is self-assessed** (until §6 external review lands).
-  A cold-review pass could move it up or down ~0.1–0.2.
+- **Quality Factor is LLM-reviewed, not human-peer-reviewed.** §6 contains
+  a 4-model cross-review landing at 1.175 (individual scores 1.15 / 1.25 /
+  1.15 / 1.15). That's one step up from pure self-assessment but not
+  equivalent to senior-IC peer review. A cold-review pass by someone who
+  has shipped a Next.js + React app could move this ±0.1.
 - **Active Hours reconcile to AW within ~10%.** Minor self-reporting
   noise; logged entries are conservative relative to AW data.
 - **Decision Value includes entries where the "decision" is a reframing

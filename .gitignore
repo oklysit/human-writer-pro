@@ -37,8 +37,11 @@ next-env.d.ts
 
 # eval run outputs (generated, not committed)
 # — but keep the VR validation analysis report, which is a written artifact
+# — and the cross-model MoJo review (defense artifact cited from MOJO-SCORE §6)
 /eval/reports/*
 !/eval/reports/vr-validation.md
+!/eval/reports/mojo-review-2026-04-16/
+!/eval/reports/mojo-review-2026-04-16/**
 
 # scratch/ holds per-run debug script outputs (verify-strip, verify-all-fixtures, etc.)
 # Useful locally, too churny to track in git.

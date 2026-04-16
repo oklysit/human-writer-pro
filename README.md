@@ -4,7 +4,7 @@ A voice-preserving AI writing assistant that asks before it drafts. Built so the
 
 You upload context (a job posting, a school assignment + rubric, a research paper). It interviews you about it — one adaptive question at a time, pushing back when answers go vague. Then it assembles a polished draft by stitching your verbatim phrasing — the specific sentences and hesitations that make writing sound human. The output reads as yours because it is.
 
-> **MoJo Score story.** Output / Human Time. A submission-ready cover letter from a 5-10 minute dictation, vs ~60 minutes cold-start. The assembly call is one Sonnet 4.6 round-trip; the writer's hand is on the keyboard for the interview, not the prose. Orchestration handles the rest — adaptive interviewer, two-pass Socratic edit flow, and a verbatim-stitching prompt regime validated across a 54-variant pre-registered pilot.
+> **MoJo Score: ~25x** (Scenario B Provisional). A submission-ready cover letter from a 5-10 minute dictation, vs ~60 minutes cold-start. Quality Factor and per-decision Clarity Scores cross-model-validated across four independent reviewers (Opus 4.6 / Gemini 3.1 Pro / GLM 5.1 / Kimi K2.5); TVH benchmarks and Investment Avoided reviewed in a second pass against Beswick's "realistic next increment" test. Full defense, constraints, and sensitivity analysis in [`MOJO-SCORE.md`](./MOJO-SCORE.md) — TL;DR at the top.
 
 ## What this is (and isn't)
 
@@ -74,7 +74,7 @@ components/                   React components (interview, preview, edit-chat)
 lib/
   anthropic-client.ts         BYO-key client (+ optional dev OAuth proxy)
   assemble.ts                 Assembly + regenerate-with-feedback (cl/edit modes)
-  interview-engine.ts         Adaptive interviewer + Socratic edit-chat engine
+  interview-engine.ts         Adaptive interviewer + readiness assessment engine
   prompts/modes/              Mode-specific guidance (cover-letter is the load-bearing mode)
   useVoiceInput.ts            Web Speech API hook
   fileImport.ts               Browser-side .pdf/.docx/.md/.txt extraction
@@ -108,21 +108,25 @@ GPTZero is called if `GPTZERO_API_KEY` is set; skipped gracefully otherwise.
 Not in MVP — landing post-submission:
 
 - **Multi-mode polish.** Mode picker temporarily hidden during the context-first refactor (mode hardcoded to cover-letter for the demo). Academic mode (PDF assignment + rubric → essay), email mode, and free-form writing on the same engine. The architecture supports this; the prompt-tuning + interview-adapter work hasn't shipped yet.
-- **Selection-based Edit Chat.** Currently operates on the closest paragraph. Right model is text-selection-respecting (any range — word, phrase, paragraph) with inline popover edits for short selections.
+- **Selection-based Edit Chat.** MVP ships whole-output regenerate-with-feedback only; the paragraph-level edit-chat component exists in the codebase but no UI surface invokes it. Right design is text-selection-respecting (any range — word, phrase, paragraph) with inline popover edits for short selections.
 - **Roughness-injection pass.** Post-assembly pass that re-introduces sentence-length variance without losing the verbatim-stitched core. Targets the dense-technical-content register edge case where AI detection flips on otherwise-good output.
 - **Automated GPTZero regression.** Statistically significant n per fixture pre-merge.
 
 ## Decision Value highlights
 
-A few decisions this build killed or reframed (Clarity Score per Beswick Part 3):
+Seven decisions this build killed or reframed. Clarity Scores are **cross-model averages** from four independent reviewers (Beswick Part 3 definition):
 
-| Decision | Clarity |
+| Decision | Cross-model Clarity |
 |---|---|
-| VR as the causal lever for AI-detection — reframed as downstream marker; prompt regime is the lever | 0.9 |
-| 5 writing modes with equal polish — only cover-letter is fully implemented; others share the same engine | 0.7 |
-| Adversarial framing in Edit Chat — replaced with Socratic | 0.75 |
+| VR-as-causal-lever reframed to downstream marker; prompt regime is the lever (n=54 pilot, reviewer-revised) | **0.90** |
+| AI-isms scoped to dismiss-only (pattern-match false positives unavoidable) | **0.89** |
+| Inline text editing deferred (regenerate-with-feedback covers the use case) | **0.84** |
+| Paragraph-level Edit Chat replaced with whole-output regenerate-with-feedback | **0.80** |
+| MoJo submission framed as HWP (not Career Forge); multi-mode deferred | **0.80** |
+| "GPTZero is noise" reversed — product name makes it the bar; optimize Mixed % | **0.74** |
+| Shipped v4.1 framework port despite GPTZero 1/3 pass-rate variance | **0.68** |
 
-Full reasoning in [`process/decisions.md`](./process/decisions.md). Future experiments in [`process/future-experiments.md`](./process/future-experiments.md).
+Full reasoning + Investment Avoided per entry in [`process/decisions.md`](./process/decisions.md). Cross-model IA + Clarity review in [`MOJO-SCORE.md §6`](./MOJO-SCORE.md). Future experiments in [`process/future-experiments.md`](./process/future-experiments.md).
 
 ## Parent project
 

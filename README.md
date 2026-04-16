@@ -105,11 +105,24 @@ GPTZero is called if `GPTZERO_API_KEY` is set; skipped gracefully otherwise.
 
 ## Roadmap
 
-Not in MVP — landing post-submission:
+Not in MVP — landing post-submission. Full writeups + budget estimates in
+[`process/future-experiments.md`](./process/future-experiments.md).
 
-- **Multi-mode polish.** Mode picker temporarily hidden during the context-first refactor (mode hardcoded to cover-letter for the demo). Academic mode (PDF assignment + rubric → essay), email mode, and free-form writing on the same engine. The architecture supports this; the prompt-tuning + interview-adapter work hasn't shipped yet.
-- **Selection-based Edit Chat.** MVP ships whole-output regenerate-with-feedback only; the paragraph-level edit-chat component exists in the codebase but no UI surface invokes it. Right design is text-selection-respecting (any range — word, phrase, paragraph) with inline popover edits for short selections.
-- **Roughness-injection pass.** Post-assembly pass that re-introduces sentence-length variance without losing the verbatim-stitched core. Targets the dense-technical-content register edge case where AI detection flips on otherwise-good output.
+**Next sprint:**
+- **Selection-based inline editing.** Single-word replacements without a full assembly round-trip. Component exists; UI trigger deferred for selection-respecting design.
+- **Formatting directives.** "Bold the company name," "add bullet points" as regenerate feedback → markdown output. ReactMarkdown already renders it; needs prompt threading.
+- **PDF / DOCX export.** One-click export from the output panel to submission-ready formats.
+
+**Short-term:**
+- **Multi-mode polish.** Academic essay, email, free-form on the same engine. Architecture supports it; prompt-tuning + interview-adapter work hasn't shipped.
+- **GPTZero "Mixed %" validation.** Test the hypothesis that polished voice-preserved output should optimize for Mixed classification, not 100% Human.
+- **Roughness-injection pass.** Re-introduce sentence-length variance post-assembly for dense-technical-content registers.
+
+**Medium-term:**
+- **Voice profile memory.** Distill recurring speech patterns from accumulated transcripts into a compact profile that the assembly prompt uses automatically. Productizes the manual `voice-profile.md` process from the parent human-writer skill.
+
+**Research:**
+- **Local model fine-tuning from transcripts.** Use interview Q&A pairs to train a small model (LoRA on Llama / SmolLM) whose natural output approximates the user's voice. Hybrid approach: small model for voice texture, frontier model for structure.
 - **Automated GPTZero regression.** Statistically significant n per fixture pre-merge.
 
 ## Decision Value highlights

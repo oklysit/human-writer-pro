@@ -165,19 +165,182 @@ implementation plan. Skip without regret if Day 3 budget is spent.
 
 ---
 
-## Prioritization (when the user asks)
+---
 
-If forced to rank these by expected leverage on product quality in the
-next 2 weeks of the project:
+## Product Roadmap (post-submission)
 
-1. **#4 Fuzzy rubric matching** — cheapest, highest chance of fixing a
-   real silent bug
-2. **#1 Socratic vs. adversarial judge** — fastest clarity-score win;
-   informs pipeline framing consistency
-3. **#6 Multi-model comparison** — pure marketing / portfolio value for
-   the Lawyer.com submission
-4. **#2 Deterministic VR injection** — real technical contribution but
-   depends on confirming the causal-lever framing is stable
-5. **#3 Register classifier** — valuable but heavy lift
-6. **#5 Register-diverse fixtures** — important eventually but blocked
-   on real user usage data across modes
+These are product features rather than empirical experiments. Added
+2026-04-15 from the builder's backlog. They represent what HWP
+becomes if the MoJo submission leads to continued development.
+
+---
+
+## 7. Selection-based inline text editing
+
+**What.** Replace whole-output regenerate-with-feedback with a
+selection-respecting edit system. User selects a word, phrase, or
+paragraph → inline popover for short selections, side-panel Socratic
+edit for paragraphs. Single-word replacements shouldn't need a full
+assembly round-trip.
+
+**Status.** Component exists (`components/edit-chat.tsx`, 514 LOC) but
+no UI surface invokes it. Deferred as Decision D2 (cross-model Clarity
+0.80) — the selection-respecting design was the right v2 target, and
+regenerate-with-feedback covers the "change one thing" use case for MVP.
+
+**VR implication.** Manual edits only recalculate VR against the
+numerator (output 5-grams vs existing user-word pool). Edits are NOT
+folded into the denominator — prevents paste-to-inflate abuse.
+
+**Budget.** ~8-12 hours (range tracking, anchor-based replacement,
+contenteditable integration, UAT).
+
+---
+
+## 8. Export to PDF / DOCX / rich formats
+
+**What.** The output panel currently offers Copy (clipboard) and
+Download (.md). Add export to PDF (via browser print or a headless
+renderer) and DOCX (via `docx` npm package or server-side pandoc). For
+cover letters, a clean single-page PDF with basic typography. For
+essays, a properly formatted DOCX with heading levels + page breaks.
+
+**Why it matters.** Many submission portals (job boards, LMS) expect
+PDF or DOCX uploads. Copy-paste loses formatting. A one-click export
+closes the gap between "draft in HWP" and "submit."
+
+**Budget.** ~4-6 hours (PDF via CSS `@media print` is cheap; DOCX
+needs a library).
+
+---
+
+## 9. Formatting directives in regenerate-with-feedback
+
+**What.** Let the user say "bold the company name," "add bullet points
+under the skills paragraph," "underline the closing line" as feedback
+and have the assembler output markdown with the requested formatting.
+Currently the assembler outputs flat prose; markdown formatting
+(bold, bullets, headers) is not reliably threaded through.
+
+**Status.** The `GENERIC_WRITE_SYSTEM_PROMPT` doesn't prohibit
+formatting, but also doesn't instruct it. The CL `SYSTEM_PROMPT`
+explicitly asks for a 5-section structure with bulleted skills — so
+partial precedent exists. Needs a formatting-directive parser or a
+simple "the user asked for formatting; apply it" instruction appended
+to the regen prompt.
+
+**Budget.** ~2-3 hours (prompt engineering + ReactMarkdown already
+renders bold/bullets/etc via `.prose-output`).
+
+---
+
+## 10. Voice profile memory — distill user voice rules from transcripts
+
+**What.** Accumulate interview transcripts across sessions. After n
+sessions (e.g., 10), run an extraction pass that distills the user's
+recurring speech patterns, vocabulary preferences, filler style,
+sentence-length distribution, and topic-specific register into a
+compact voice-profile document. Feed this profile into the assembly
+prompt so output matches the user without the user repeating themselves.
+
+**Precedent.** The parent `human-writer` Claude Code skill already
+ships a voice profile (`voice-profile.md`) built from ~133K words of
+the builder's transcribed writing. This feature productizes that
+process: instead of manually curating the profile, the app learns it
+from accumulated usage.
+
+**Research questions.** How many sessions until the profile stabilizes?
+Does the profile help or hurt VR (adding style constraints could
+compete with verbatim stitching)? Does the profile transfer across
+writing modes (CL voice != essay voice)?
+
+**Budget.** ~8-12 hours for extraction pipeline + storage + prompt
+integration. Validation: compare assembly output with/without profile
+across 3+ sessions.
+
+---
+
+## 11. Local model fine-tuning from interview transcripts
+
+**What.** Use accumulated question-answer pairs from interviews as
+training data for a small local model (e.g., SmolLM, Phi, or a LoRA
+on Llama). The fine-tuned model's natural output would approximate the
+user's voice, reducing the assembly prompt's burden to stitch verbatim.
+
+**Challenges.**
+- Filler removal: spoken transcripts contain disfluencies that
+  shouldn't transfer to the model's writing style.
+- Context window: small models struggle with long transcripts
+  (interview + context + prior output for regen).
+- Quality floor: the model must produce comprehensible, coherent
+  prose — not all small models can at 3B-7B scale.
+- Data volume: meaningful fine-tuning likely needs 50+ interview
+  sessions (~25K+ words of Q&A pairs).
+
+**Precedent.** The builder's side project explored SmolLM3 + XTC
+sampling for voice-matched text generation. Results were mixed — the
+small model captured burstiness and filler patterns but couldn't
+reliably produce structured output (cover letters, essays). A hybrid
+approach (small model for voice texture, frontier model for structure)
+is the more promising path.
+
+**Budget.** ~20-40 hours research + training + eval. Requires GPU
+access (local or cloud).
+
+---
+
+## 12. GPTZero "Mixed %" as a quality optimization target
+
+**What.** Validate whether optimizing for GPTZero's "Mixed" score
+(rather than "Human %") is a better proxy for polished
+voice-preserved output. Hypothesis: polished writing from a
+verbatim-stitching workflow should land as "Mixed" because it contains
+real human phrasing + model-generated connective tissue. "100% Human"
+often means unpolished rambling that survived intact. "100% AI" means
+the model dominated. "Mixed" is the sweet spot.
+
+**Status.** This hypothesis was surfaced in the four-letter comparison
+(`process/four-letter-comparison.md`): Letter 2 v2 scored "100% mixed"
+and was the highest quality by eye-test. The GPTZero reversal decision
+(D4, Clarity 0.74) adopted Mixed % as the directional target but has
+no automated regression to validate it.
+
+**Minimal experiment.** Generate 20 outputs across 4 fixtures using the
+band-35 prompt. Score each via GPTZero API. Bin by classification
+(Human / Mixed / AI). Have the builder eye-test-rank within each bin.
+If Mixed-classified outputs consistently rank higher than
+Human-classified outputs, the hypothesis holds and Mixed % becomes the
+primary optimization target.
+
+**Budget.** ~4 hours engineering + ~$5 GPTZero API.
+
+---
+
+## Prioritization (updated 2026-04-15)
+
+If forced to rank by expected leverage on product quality:
+
+**Immediate (next sprint):**
+1. **#7 Selection-based Edit Chat** — biggest UX gap; unlocks
+   single-word fixes without full regen
+2. **#9 Formatting directives** — cheap (2-3h), unlocks bold/bullets
+   in output via feedback
+3. **#8 PDF/DOCX export** — closes the "draft → submit" gap
+
+**Short-term (next month):**
+4. **#12 GPTZero Mixed % validation** — validates the quality-signal
+   hypothesis; informs all future prompt work
+5. **#4 Fuzzy rubric matching** — cheapest fix for a likely silent bug
+6. **#1 Socratic vs. adversarial judge** — framing consistency
+
+**Medium-term (next quarter):**
+7. **#10 Voice profile memory** — productizes the manual voice-profile
+   process; differentiator at scale
+8. **#3 Register classifier** — enables per-register quality targets
+9. **#2 Deterministic VR injection** — edge-case hardening
+
+**Long-term (research):**
+10. **#11 Local model fine-tuning** — highest potential, highest risk,
+    needs data volume + GPU access
+11. **#5 Register-diverse fixtures** — blocked on multi-mode usage data
+12. **#6 Multi-model comparison** — portfolio/marketing value

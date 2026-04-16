@@ -16,7 +16,7 @@ You upload context (a job posting, a school assignment + rubric, a research pape
 
 ## Quick start (5 minutes)
 
-Requires Node 18+ and your own [Anthropic API key](https://console.anthropic.com/settings/keys).
+Requires Node 18+ and your own [Anthropic API key](https://console.anthropic.com/settings/keys) (new accounts get $5 free credit — enough for dozens of generations). Multi-provider support (OpenAI, Gemini, etc.) is on the [roadmap](./process/future-experiments.md). If you'd prefer not to sign up, the Loom walkthrough included with the submission demonstrates the full workflow end-to-end.
 
 ```bash
 git clone https://github.com/oklysit/human-writer-pro
@@ -123,6 +123,7 @@ Not in MVP — landing post-submission. Full writeups + budget estimates in
 
 **Research:**
 - **Local model fine-tuning from transcripts.** Use interview Q&A pairs to train a small model (LoRA on Llama / SmolLM) whose natural output approximates the user's voice. Hybrid approach: small model for voice texture, frontier model for structure.
+- **Multi-provider support.** OpenAI-compatible endpoint adapter so users can BYO any provider key (OpenAI, Gemini, GLM, Kimi, local Ollama). Currently Anthropic-only.
 - **Automated GPTZero regression.** Statistically significant n per fixture pre-merge.
 
 ## Decision Value highlights

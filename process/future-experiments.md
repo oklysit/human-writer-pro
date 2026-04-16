@@ -316,6 +316,40 @@ primary optimization target.
 
 ---
 
+## 13. Multi-provider support (OpenAI-compatible endpoint adapter)
+
+**What.** Add an OpenAI-compatible API adapter alongside the current
+Anthropic SDK integration. Users pick their provider in Settings and
+paste any API key — OpenAI, Gemini (via OpenAI-compat endpoint), GLM,
+Kimi, or a local Ollama instance. The assembly + interview engine calls
+route through a thin adapter that translates between Anthropic message
+format and OpenAI chat-completion format.
+
+**Why it matters.** HWP currently requires an Anthropic API key. If the
+reviewer (or a future user) primarily uses OpenAI / Gemini / a local
+model, they can't try the product without signing up for a new
+provider. For a product called "Human Writer Pro" (not "Claude Writer
+Pro"), provider lock-in is a friction point and a branding mismatch.
+
+**Status.** The Anthropic SDK is deeply threaded through `lib/assemble.ts`
+(streaming via `client.messages.stream()`), `lib/interview-engine.ts`,
+and `lib/anthropic-client.ts`. The settings dialog validates key format
+against `sk-ant-` (with an OAuth bypass for dev mode). Refactoring to
+a provider-agnostic interface touches all three files + the settings UI.
+
+**Minimal implementation.** Add a `lib/llm-client.ts` adapter with a
+`stream(messages, options)` method. Two concrete implementations:
+`AnthropicClient` (current) and `OpenAICompatClient` (new). Settings
+dialog gets a provider dropdown + key input. Assembly + interview code
+calls the adapter instead of the Anthropic SDK directly. Stream parsing
+differs (Anthropic SSE vs OpenAI SSE) — the adapter normalizes to a
+common `onToken` callback.
+
+**Budget.** ~6-8 hours (adapter + settings UI + stream parser + testing
+across 2-3 providers).
+
+---
+
 ## Prioritization (updated 2026-04-15)
 
 If forced to rank by expected leverage on product quality:
@@ -342,5 +376,6 @@ If forced to rank by expected leverage on product quality:
 **Long-term (research):**
 10. **#11 Local model fine-tuning** — highest potential, highest risk,
     needs data volume + GPU access
-11. **#5 Register-diverse fixtures** — blocked on multi-mode usage data
-12. **#6 Multi-model comparison** — portfolio/marketing value
+11. **#13 Multi-provider support** — removes Anthropic-only friction
+12. **#5 Register-diverse fixtures** — blocked on multi-mode usage data
+13. **#6 Multi-model comparison** — portfolio/marketing value

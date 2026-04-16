@@ -144,3 +144,16 @@ MIT — see [LICENSE](./LICENSE).
 ### For Ryan Beswick — Mojo take-home submission
 
 This repo is the build itself; the orchestration story is in [`MOJO-SETUP.md`](./MOJO-SETUP.md). MoJo Score = Output / Human Time — the product *is* the demonstration. Try it: clone, paste an Anthropic key, paste a job posting (or upload an assignment PDF), dictate for 5 minutes, get a submittable draft.
+
+**If you're reviewing this for the MoJo submission, start here:**
+
+| Artifact | One-line TL;DR |
+|---|---|
+| [`MOJO-SCORE.md`](./MOJO-SCORE.md) | Full score defense — formula, Active Hours ledger, three TVH scenarios (A/B/C), Quality Factor evidence, Decision Value table. **Single-number answer in §8.** |
+| [`MOJO-SETUP.md`](./MOJO-SETUP.md) | How the build was orchestrated — model routing (Opus orchestrator, Sonnet implementer, Sonnet reviewer), subagent dispatch pattern, Decision Value log. |
+| [`process/decisions.md`](./process/decisions.md) | Decision log with Clarity Scores per Beswick Part 3 — what was killed, what was reframed after external pushback, and why. |
+| [`eval/reports/vr-validation.md`](./eval/reports/vr-validation.md) | Pre-registered n=54 pilot on Verbatim Ratio (Fisher's p<0.0001). TL;DR at the top documents the reviewer-revised causal claim — VR is a diagnostic marker of the prompt regime, not the causal lever. |
+| [`process/four-letter-comparison.md`](./process/four-letter-comparison.md) | Four-letter workflow comparison that falsified "high VR = high quality" as a cross-workflow claim and surfaced procedural ordering as the real load-bearing mechanism. |
+| [`process/future-experiments.md`](./process/future-experiments.md) | What's next: roughness-injection pass, multi-mode polish, automated GPTZero regression at scale. |
+
+**Fast path (≈10 min):** read the [`MOJO-SCORE.md`](./MOJO-SCORE.md) §8 answer, skim [`process/decisions.md`](./process/decisions.md), then clone and try the app on one of your own cover letters.

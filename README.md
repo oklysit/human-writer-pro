@@ -4,7 +4,7 @@ A voice-preserving AI writing assistant that asks before it drafts. Built so the
 
 You upload context (a job posting, a school assignment + rubric, a research paper). It interviews you about it — one adaptive question at a time, pushing back when answers go vague. Then it assembles a polished draft by stitching your verbatim phrasing — the specific sentences and hesitations that make writing sound human. The output reads as yours because it is.
 
-> **MoJo Score: ~25x** (Scenario B Provisional). A submission-ready cover letter from a 5-10 minute dictation, vs ~60 minutes cold-start. Quality Factor and per-decision Clarity Scores cross-model-validated across four independent reviewers (Opus 4.6 / Gemini 3.1 Pro / GLM 5.1 / Kimi K2.5); TVH benchmarks and Investment Avoided reviewed in a second pass against Beswick's "realistic next increment" test. Full defense, constraints, and sensitivity analysis in [`MOJO-SCORE.md`](./MOJO-SCORE.md) — TL;DR at the top.
+> **Roughly 5-10x faster cover-letter drafting:** a submission-ready draft from 5-10 minutes of dictation vs ~60 minutes cold-start. Output quality and per-decision rationale cross-model-validated across four independent reviewer models (Opus 4.6 / Gemini 3.1 Pro / GLM 5.1 / Kimi K2.5).
 
 ## What this is (and isn't)
 
@@ -62,7 +62,7 @@ Full writeup at [`eval/reports/vr-validation.md`](./eval/reports/vr-validation.m
 ## Architecture
 
 - **Next.js 14 App Router** — single-page client app
-- **Anthropic SDK (`@anthropic-ai/sdk`)** — direct browser-to-API calls (`dangerouslyAllowBrowser: true`); no backend proxy in production. BYO-key model — see "Quick start" above.
+- **Anthropic SDK (`@anthropic-ai/sdk`)** — direct browser-to-API calls (`dangerouslyAllowBrowser: true`); no backend proxy in production. The user's key lives in browser localStorage only and never reaches a server. This is a deliberate MVP tradeoff for shareability — a production deployment would route through a backend proxy with server-side key vaulting (e.g. AWS Secrets Manager, HashiCorp Vault) and rate-limit + audit at the proxy layer. BYO-key model — see "Quick start" above.
 - **Zustand** — session state (interview turns, output, settings)
 - **shadcn/ui + Radix UI** — accessibility primitives, restyled with editorial design tokens
 - **Web Speech API** — browser-native voice recognition (Chrome/Edge support)
@@ -128,7 +128,7 @@ Not in MVP — landing post-submission. Full writeups + budget estimates in
 
 ## Decision Value highlights
 
-Seven decisions this build killed or reframed. Clarity Scores are **cross-model averages** from four independent reviewers (Beswick Part 3 definition):
+Seven decisions this build killed or reframed. Clarity Scores are **cross-model averages** from four independent reviewer models (Opus 4.6 / Gemini 3.1 Pro / GLM 5.1 / Kimi K2.5):
 
 | Decision | Cross-model Clarity |
 |---|---|
@@ -140,7 +140,7 @@ Seven decisions this build killed or reframed. Clarity Scores are **cross-model 
 | "GPTZero is noise" reversed — product name makes it the bar; optimize Mixed % | **0.74** |
 | Shipped v4.1 framework port despite GPTZero 1/3 pass-rate variance | **0.68** |
 
-Full reasoning + Investment Avoided per entry in [`process/decisions.md`](./process/decisions.md). Cross-model IA + Clarity review in [`MOJO-SCORE.md §6`](./MOJO-SCORE.md). Future experiments in [`process/future-experiments.md`](./process/future-experiments.md).
+Full reasoning + Investment Avoided per entry in [`process/decisions.md`](./process/decisions.md). Future experiments in [`process/future-experiments.md`](./process/future-experiments.md).
 
 ## Parent project
 
@@ -156,22 +156,3 @@ HWP is the productized output of one component of **Career Forge** — a multi-a
 ## License
 
 MIT — see [LICENSE](./LICENSE).
-
----
-
-### For Ryan Beswick — Mojo take-home submission
-
-This repo is the build itself; the orchestration story is in [`MOJO-SETUP.md`](./MOJO-SETUP.md). MoJo Score = Output / Human Time — the product *is* the demonstration. Try it: clone, paste an Anthropic key, paste a job posting (or upload an assignment PDF), dictate for 5 minutes, get a submittable draft.
-
-**If you're reviewing this for the MoJo submission, start here:**
-
-| Artifact | One-line TL;DR |
-|---|---|
-| [`MOJO-SCORE.md`](./MOJO-SCORE.md) | Full score defense — formula, Active Hours ledger, three TVH scenarios (A/B/C), Quality Factor evidence, Decision Value table. **Single-number answer in §8.** |
-| [`MOJO-SETUP.md`](./MOJO-SETUP.md) | How the build was orchestrated — model routing (Opus orchestrator, Sonnet implementer, Sonnet reviewer), subagent dispatch pattern, Decision Value log. |
-| [`process/decisions.md`](./process/decisions.md) | Decision log with Clarity Scores per Beswick Part 3 — what was killed, what was reframed after external pushback, and why. |
-| [`eval/reports/vr-validation.md`](./eval/reports/vr-validation.md) | Pre-registered n=54 pilot on Verbatim Ratio (Fisher's p<0.0001). TL;DR at the top documents the reviewer-revised causal claim — VR is a diagnostic marker of the prompt regime, not the causal lever. |
-| [`process/four-letter-comparison.md`](./process/four-letter-comparison.md) | Four-letter workflow comparison that falsified "high VR = high quality" as a cross-workflow claim and surfaced procedural ordering as the real load-bearing mechanism. |
-| [`process/future-experiments.md`](./process/future-experiments.md) | What's next: roughness-injection pass, multi-mode polish, automated GPTZero regression at scale. |
-
-**Fast path (≈10 min):** read the [`MOJO-SCORE.md`](./MOJO-SCORE.md) §8 answer, skim [`process/decisions.md`](./process/decisions.md), then clone and try the app on one of your own cover letters.

@@ -46,14 +46,19 @@ export async function POST(req: NextRequest) {
   let body: IncomingBody;
   try {
     body = (await req.json()) as IncomingBody;
-  } catch (err) {
-    return NextResponse.json(
-      { error: `Invalid JSON body: ${err instanceof Error ? err.message : String(err)}` },
-      { status: 400 }
-    );
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
   const { model, messages = [], system = "" } = body;
+
+  // Constrain `model` to the Claude model-id shape before forwarding to the
+  // Agent SDK — rejects an arbitrary/garbage string or an attempt to smuggle a
+  // non-Claude provider id into query(). A stricter production hardening would
+  // allow-list exact model ids. (Security review 2026-06-02, OWASP LLM10.)
+  if (model !== undefined && !/^claude-[\w.-]+$/.test(model)) {
+    return NextResponse.json({ error: "Unsupported model" }, { status: 400 });
+  }
 
   // Agent SDK's query() takes a single string `prompt`, but interview-engine
   // passes a multi-turn history (user ↔ assistant back-and-forth). Collapse
@@ -107,9 +112,12 @@ export async function POST(req: NextRequest) {
       }
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    // Log full detail server-side only; return a generic message so upstream/SDK
+    // internals (credential paths, stack) aren't leaked to the client.
+    // (Security review 2026-06-02, OWASP LLM02 / info disclosure.)
+    console.error("[oauth-proxy] Agent SDK error:", err);
     return NextResponse.json(
-      { error: `Agent SDK error: ${message}` },
+      { error: "Upstream generation failed" },
       { status: 500 }
     );
   }

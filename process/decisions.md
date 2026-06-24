@@ -1,16 +1,15 @@
 # Decisions — Human Writer Pro
 
 Running log of killed assumptions and reframings. Each entry names the claim
-we killed or reframed, the evidence that forced the change, and a Clarity
-Score (0–1) representing how definitive the finding was. Per Ryan Beswick's
-MoJo Score Part 3: Decision Value = Investment Avoided × Clarity Score. High
-Clarity Scores come from definitive nulls, not partial suggestion.
+we killed or reframed, the evidence that forced the change, and a confidence
+rating (0–1) representing how definitive the finding was. Higher confidence
+comes from definitive nulls, not partial suggestion.
 
 Newest entries first.
 
 ---
 
-## 2026-04-15 — Replaced paragraph-Edit-Chat with whole-output regenerate-with-feedback (Clarity: 0.85)
+## 2026-04-15 — Replaced paragraph-Edit-Chat with whole-output regenerate-with-feedback (Confidence: 0.85)
 
 **Killed claim:** "Edit Chat must work at the paragraph level via a Socratic complaint→question→answer→restitch flow on a selected paragraph; that's the load-bearing UX for refinement."
 
@@ -22,7 +21,7 @@ Newest entries first.
 
 ---
 
-## 2026-04-15 — Shipped v4.1 framework port despite GPTZero pass-rate variance (Clarity: 0.7)
+## 2026-04-15 — Shipped v4.1 framework port despite GPTZero pass-rate variance (Confidence: 0.7)
 
 **Killed claim:** "Don't ship a framework change until k=3 GPTZero scores ≥ 78% pass rate (the v3 Letter 2 baseline)."
 
@@ -34,7 +33,7 @@ Newest entries first.
 
 ---
 
-## 2026-04-15 — GPTZero IS the bar (reversed earlier 'noisy threshold gate' framing) (Clarity: 0.75)
+## 2026-04-15 — GPTZero IS the bar (reversed earlier 'noisy threshold gate' framing) (Confidence: 0.75)
 
 **Killed claim (mid-session, by me):** "GPTZero is too noisy on this fixture to use as decision signal — pick prompts on framework adherence + eye-test alone."
 
@@ -42,11 +41,11 @@ Newest entries first.
 
 **Source:** User pushback 2026-04-15 after I'd framed GPTZero as "too noisy to act on." The earlier framing under-weighted the brand/positioning stake of the product name.
 
-**Impact:** Avoided ~5h of energy that would have gone toward prompt iteration on framework adherence alone without addressing the GPTZero pass-rate variance — the actual product-quality bar a Lawyer.com evaluator would measure against. Clarity 0.75 because the optimization target (Mixed %) is itself unvalidated; we don't have automated GPTZero regression yet to pressure-test. Within-draft VR iteration framing still holds; cross-prompt VR comparison is still meaningless. See `feedback_gptzero_is_the_bar.md` (career-forge memory).
+**Impact:** Avoided ~5h of energy that would have gone toward prompt iteration on framework adherence alone without addressing the GPTZero pass-rate variance — the actual product-quality bar. Confidence 0.75 because the optimization target (Mixed %) is itself unvalidated; we don't have automated GPTZero regression yet to pressure-test. Within-draft VR iteration framing still holds; cross-prompt VR comparison is still meaningless. See `feedback_gptzero_is_the_bar.md` (career-forge memory).
 
 ---
 
-## 2026-04-13 — VR = 35% reframed from target to prompt nudge (Clarity: 0.85)
+## 2026-04-13 — VR = 35% reframed from target to prompt nudge (Confidence: 0.85)
 
 **Killed claim:** "This product targets 35% VR as a success criterion."
 
@@ -68,7 +67,7 @@ must respect. Refactor Task 20 Change 2 is explicitly overridden.
 
 ---
 
-## 2026-04-13 — VR as causal lever for GPTZero passing (Clarity: 0.9)
+## 2026-04-13 — VR as causal lever for GPTZero passing (Confidence: 0.9)
 
 **Killed claim:** "VR ≥ 20% is the causal mechanism by which output passes
 GPTZero."
@@ -91,7 +90,7 @@ Task 17b (AI-ism regex gate) takes the prominent UI slot instead.
 
 ---
 
-## 2026-04-13 — Synthetic regression fixtures (Clarity: 0.8)
+## 2026-04-13 — Synthetic regression fixtures (Confidence: 0.8)
 
 **Killed claim:** "Five synthetic raw_interview JSON fixtures are sufficient
 regression coverage."
@@ -116,7 +115,7 @@ failure condition).
 
 ---
 
-## 2026-04-13 — 5 writing modes with equal polish (Clarity: 0.7)
+## 2026-04-13 — 5 writing modes with equal polish (Confidence: 0.7)
 
 **Killed claim:** "Essay, email, blog, cover-letter, and free-form all ship
 with equal production quality."
@@ -138,7 +137,7 @@ email added if time permits).
 
 ---
 
-## 2026-04-13 — Adversarial framing in edit chat (Clarity: 0.75)
+## 2026-04-13 — Adversarial framing in edit chat (Confidence: 0.75)
 
 **Killed claim:** "Edit chat pushes back adversarially on the user's writing
 to surface gaps."
@@ -162,9 +161,9 @@ Task 9 (Socratic assessment of each response, not adversarial pushback).
 
 ---
 
-## Open research questions (post-submission)
+## Open research questions
 
 - "Socratic vs adversarial LLM-as-judge produces different output quality" —
-  exploratory. User surfaced this in pair-review. If LLM-as-judge prompts
+  exploratory. Surfaced in pair-review. If LLM-as-judge prompts
   frame the critique Socratically rather than adversarially, does the judged
-  output change? See `process/future-experiments.md` (TBD) post-submission.
+  output change? See `process/future-experiments.md`.

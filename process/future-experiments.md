@@ -1,10 +1,9 @@
 # Future Experiments
 
 Open research questions surfaced during the Human Writer Pro build
-(2026-04-13 / 2026-04-14). None of these are required for the MVP
-submission — they are starting points for follow-up work if the
-Lawyer.com team invites a Part 2 / Part 3 interview, or for later
-iterations of the product itself.
+(2026-04-13 / 2026-04-14). None of these were required for the MVP
+— they are starting points for follow-up work and later iterations
+of the product.
 
 Each entry names the question, the current state of evidence (if any),
 and the minimal experiment that would move the needle.
@@ -149,9 +148,8 @@ weekly.
 Kimi K2.5) produce higher-quality output on the band-35 prompt than
 Claude Sonnet 4.6?
 
-**Why it matters.** Literal "Model Jockey" evidence — shows the
-engineer can route across providers instead of defaulting to one.
-Also hedges against Claude-specific failure modes.
+**Why it matters.** Shows the ability to route across providers instead
+of defaulting to one. Also hedges against Claude-specific failure modes.
 
 **Minimal experiment.** Run regression suite (Task 20) against the
 5 CL fixtures with Sonnet 4.6 (current), Gemini 3.1 Pro (via
@@ -167,11 +165,11 @@ implementation plan. Skip without regret if Day 3 budget is spent.
 
 ---
 
-## Product Roadmap (post-submission)
+## Product Roadmap
 
 These are product features rather than empirical experiments. Added
 2026-04-15 from the builder's backlog. They represent what HWP
-becomes if the MoJo submission leads to continued development.
+becomes with continued development.
 
 ---
 

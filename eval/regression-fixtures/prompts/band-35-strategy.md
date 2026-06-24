@@ -51,7 +51,7 @@ See `process/decisions.md` entry "VR=35% reframed from target to prompt nudge" f
 
 - This file is the source of truth for the CL assembly prompt across the entire regression suite.
 - Every fixture's `expected-baseline.json` is calibrated against output produced by running this prompt verbatim against the fixture's `interview.md`.
-- Changing this prompt (wording, ordering, the VR target number) requires a full re-baseline pass: re-run all fixtures, re-score VR and GPTZero, capture new baselines, document the change in `process/decisions.md` with a Clarity Score.
+- Changing this prompt (wording, ordering, the VR target number) requires a full re-baseline pass: re-run all fixtures, re-score VR and GPTZero, capture new baselines, document the change in `process/decisions.md` with a confidence rating.
 - Minor prompt-wording cleanups (typo fixes, punctuation) do not require re-baselining but must be committed separately with a clear commit message so the history shows exactly when prompt content changed.
 
 ---

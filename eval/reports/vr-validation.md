@@ -76,7 +76,7 @@ Variants with |actual 5-gram VR − target band/100| > 0.10 are excluded from H1
 ### Interview topics (user's raw dictation via WhisperFlow)
 1. *"How would you design an eval framework for an LLM-powered product — what would you measure, and how would you know when the product was working?"*
 2. *"Describe a hard problem you've solved recently in an LLM-powered system — what made it hard, and what did you change?"*
-3. *"If you were the Model Jockey at Lawyer.com tomorrow, what's the first eval you'd build?"*
+3. *"If you were an AI engineer at a new company tomorrow, what's the first eval you'd build?"*
 
 Raw interviews at `/home/pn/projects/screenshots/evals/vr-validation/2026-04-13/raw-interview-topic-{1,2,3}.md`. Topic 1 was ~1,469 words, topics 2 and 3 were ~870 words each. Words-of-raw availability sets an upper bound on how much verbatim the generator can stitch per variant.
 

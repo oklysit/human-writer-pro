@@ -1,7 +1,7 @@
 # Forward vs Backward Workflow — Cover Letter Quality Comparison
 
 **Date:** 2026-04-15
-**Context:** During the Lawyer.com Model Jockey take-home, I produced four versions of the same cover letter (target: CrowdStrike AI Security Consultant role) using two different workflows. The comparison falsified part of the product's original claim and surfaced the actual load-bearing mechanism.
+**Context:** During the initial build sprint, I produced four versions of the same cover letter (target: CrowdStrike AI Security Consultant role) using two different workflows. The comparison falsified part of the product's original claim and surfaced the actual load-bearing mechanism.
 
 ## TL;DR
 

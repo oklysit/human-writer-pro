@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "fuser -k 3000/tcp 2>/dev/null; true",
     "dev": "next dev",
     "build": "NODE_ENV=production next build",
     "start": "next start",
@@ -11,7 +12,6 @@
     "test:watch": "vitest",
     "eval:cl": "tsx scripts/eval/run-cl-regression.ts",
     "eval:cl-diff": "tsx scripts/eval/compare-baselines.ts",
-    "mojo:report": "tsx scripts/mojo-report.ts",
     "postinstall": "mkdir -p public && cp -f node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs public/pdf.worker.min.mjs"
   },
   "dependencies": {

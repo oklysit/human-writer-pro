@@ -16,7 +16,7 @@ You upload context (a job posting, a school assignment + rubric, a research pape
 
 ## Quick start (5 minutes)
 
-Requires Node 18+ and your own [Anthropic API key](https://console.anthropic.com/settings/keys) (new accounts get $5 free credit — enough for dozens of generations). Multi-provider support (OpenAI, Gemini, etc.) is on the [roadmap](./process/future-experiments.md). If you'd prefer not to sign up, the Loom walkthrough included with the submission demonstrates the full workflow end-to-end.
+Requires Node 18+ and your own [Anthropic API key](https://console.anthropic.com/settings/keys) (new accounts get $5 free credit — enough for dozens of generations). Multi-provider support (OpenAI, Gemini, etc.) is on the [roadmap](./process/future-experiments.md).
 
 ```bash
 git clone https://github.com/oklysit/human-writer-pro
@@ -51,7 +51,7 @@ Open <http://localhost:3000>, then pick one of two flows:
 | Voice input | Web Speech API | Live transcript, base-snapshot append; no audio leaves the browser |
 | File context + draft import | pdfjs-dist + mammoth | Browser-side text extraction from .pdf / .docx / .md / .txt |
 
-The build itself runs the same orchestration pattern internally — an Opus 4.6 orchestrator dispatches Sonnet 4.6 implementer subagents for build tasks, with Opus 4.6 reviewers checking spec compliance and code quality on each. See [`MOJO-SETUP.md`](./MOJO-SETUP.md) for the full setup, model routing, and Decision Value log.
+The build itself runs the same orchestration pattern internally — an Opus 4.6 orchestrator dispatches Sonnet 4.6 implementer subagents for build tasks, with Opus 4.6 reviewers checking spec compliance and code quality on each. See [`docs/build-process.md`](./docs/build-process.md) for the model routing and subagent-driven build process.
 
 ## Verbatim Ratio (VR) — measurement, not gate
 
@@ -81,9 +81,9 @@ lib/
   store.ts                    Zustand session store
 eval/
   regression-fixtures/        5 real cover-letter fixtures (3 passing, 2 documented hard cases)
-  reports/                    VR validation pilot, cl-regression baselines, MoJo Score reports
-scripts/                      Eval runner, baseline differ, MoJo Score reporter
-process/                      Decision Value log, pair-review transcripts, handoff docs
+  reports/                    VR validation + CL-regression baselines
+scripts/                      Eval runner, baseline differ
+process/                      Design decisions, review transcripts, dev notes
 ```
 
 ## Running the regression suite
@@ -105,7 +105,7 @@ GPTZero is called if `GPTZERO_API_KEY` is set; skipped gracefully otherwise.
 
 ## Roadmap
 
-Not in MVP — landing post-submission. Full writeups + budget estimates in
+Not in MVP — on the roadmap. Full writeups + budget estimates in
 [`process/future-experiments.md`](./process/future-experiments.md).
 
 **Next sprint:**
@@ -126,21 +126,20 @@ Not in MVP — landing post-submission. Full writeups + budget estimates in
 - **Multi-provider support.** OpenAI-compatible endpoint adapter so users can BYO any provider key (OpenAI, Gemini, GLM, Kimi, local Ollama). Currently Anthropic-only.
 - **Automated GPTZero regression.** Statistically significant n per fixture pre-merge.
 
-## Decision Value highlights
+## Key build decisions
 
-Seven decisions this build killed or reframed. Clarity Scores are **cross-model averages** from four independent reviewer models (Opus 4.6 / Gemini 3.1 Pro / GLM 5.1 / Kimi K2.5):
+Decisions this build killed or reframed, cross-model validated across four independent reviewer models (Opus 4.6 / Gemini 3.1 Pro / GLM 5.1 / Kimi K2.5):
 
-| Decision | Cross-model Clarity |
-|---|---|
-| VR-as-causal-lever reframed to downstream marker; prompt regime is the lever (n=54 pilot, reviewer-revised) | **0.90** |
-| AI-isms scoped to dismiss-only (pattern-match false positives unavoidable) | **0.89** |
-| Inline text editing deferred (regenerate-with-feedback covers the use case) | **0.84** |
-| Paragraph-level Edit Chat replaced with whole-output regenerate-with-feedback | **0.80** |
-| MoJo submission framed as HWP (not Career Forge); multi-mode deferred | **0.80** |
-| "GPTZero is noise" reversed — product name makes it the bar; optimize Mixed % | **0.74** |
-| Shipped v4.1 framework port despite GPTZero 1/3 pass-rate variance | **0.68** |
+| Decision |
+|---|
+| VR-as-causal-lever reframed to downstream marker; prompt regime is the lever (n=54 pilot, reviewer-revised) |
+| AI-isms scoped to dismiss-only (pattern-match false positives unavoidable) |
+| Inline text editing deferred (regenerate-with-feedback covers the use case) |
+| Paragraph-level Edit Chat replaced with whole-output regenerate-with-feedback |
+| "GPTZero is noise" reversed — product name makes it the bar; optimize Mixed % |
+| Shipped v4.1 framework port despite GPTZero 1/3 pass-rate variance |
 
-Full reasoning + Investment Avoided per entry in [`process/decisions.md`](./process/decisions.md). Future experiments in [`process/future-experiments.md`](./process/future-experiments.md).
+Full reasoning in [`process/decisions.md`](./process/decisions.md). Future experiments in [`process/future-experiments.md`](./process/future-experiments.md).
 
 ## Parent project
 
